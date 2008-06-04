@@ -12,6 +12,8 @@ import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
 import java.util.Map;
 
+import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -176,8 +178,15 @@ public class MsBuildBuilder extends Builder {
         }
 
       
-        public Builder newInstance(StaplerRequest req) {
-            return req.bindParameters(MsBuildBuilder.class,"msBuildBuilder.");
-        }
+        
+        @Override
+		public Builder newInstance(StaplerRequest arg0, JSONObject arg1) throws FormException {
+        	String buildFile= arg1.getString("msBuildFile");
+        	String cmdLineArg= arg1.getString("cmdLineArgs");
+        	MsBuildBuilder builder = new MsBuildBuilder(buildFile,cmdLineArg);
+			
+			return builder;
+		}
+
     }
 }
