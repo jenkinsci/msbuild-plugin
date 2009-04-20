@@ -2,6 +2,16 @@
 	<!--
 		This script defines the view on the project builders section for MSBuild Builder.
 	-->
+	
+   <f:entry title="MsBuild Version">
+    <select class="setting-input" name="msBuildBuilder.msBuildName">
+      <option>(Default)</option>
+      <j:forEach var="inst" items="${descriptor.installations}">
+        <f:option selected="${inst.name==instance.msBuildName}">${inst.name}</f:option>
+      </j:forEach>
+    </select>
+   </f:entry>	
+	
 	<f:entry title="MsBuild Build File" help="${rootURL}/../plugin/msbuild/help-BuildFile.html">
 		<f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}" />
 	</f:entry>

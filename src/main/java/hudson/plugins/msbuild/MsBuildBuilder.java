@@ -1,5 +1,6 @@
 package hudson.plugins.msbuild;
 
+import hudson.CopyOnWrite;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.Build;
@@ -8,14 +9,17 @@ import hudson.model.Descriptor;
 import hudson.model.Project;
 import hudson.tasks.Builder;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.FormFieldValidator;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import net.sf.json.JSONObject;
+import javax.servlet.ServletException;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * Sample {@link Builder}.
@@ -33,54 +37,73 @@ import org.kohsuke.stapler.StaplerRequest;
  * will be invoked. 
  * 
  * @author kyle.sweeney@valtech.com
+ * 2009/03/01 -- Gregory Boissinot - Zenika - Add the possibility to manage multiple Msbuild version
  *
  */
 public class MsBuildBuilder extends Builder {
 
+	/**
+	 * Identifies {@link Visual Studio} to be used.
+	 */
+	private final String msBuildName;
 	private final String msBuildFile;
 	private final String cmdLineArgs;
 	
 	/**
 	 * When this builder is created in the project configuration step,
 	 * the builder object will be created from the strings below.
+	 * @param msName The Visual studio logical identifiant name
 	 * @param msBuildFile	The name/location of the msbuild file
 	 * @param targets Whitespace separated list of command line arguments
 	 */
     @DataBoundConstructor
-    public MsBuildBuilder(String msBuildFile,String cmdLineArgs) {
-    	super();
-    	if(msBuildFile==null || msBuildFile.trim().length()==0)
-    		this.msBuildFile = "";
-    	else
-    		this.msBuildFile = msBuildFile;
-    	if(cmdLineArgs==null || cmdLineArgs.trim().length()==0)
-    		this.cmdLineArgs = "";
-    	else
-    		this.cmdLineArgs = cmdLineArgs;
+    public MsBuildBuilder(String msBuildName, String msBuildFile,String cmdLineArgs) {
+    	this.msBuildName=msBuildName;
+    	this.msBuildFile=msBuildFile;
+    	this.cmdLineArgs=cmdLineArgs;
     }
 
-    /**
-     * We'll use these from the <tt>config.jelly</tt>.
-     */
     public String getCmdLineArgs(){
         return cmdLineArgs;
     }
+
     public String getMsBuildFile(){
     	return msBuildFile;
     }
 
-    public boolean perform(Build<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
+    public String getMsBuildName() {
+		return msBuildName;
+	}
+    
+    public MsBuildInstallation getMsBuild() {
+        for( MsBuildInstallation i : DESCRIPTOR.getInstallations() ) {
+            if(msBuildName!=null && i.getName().equals(msBuildName))
+                return i;
+        }
+        return null;
+    }	
+
+	public boolean perform(Build<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
         Project proj = build.getProject();
         ArgumentListBuilder args = new ArgumentListBuilder();
-
-        //Get the path to the nant installation
-    	listener.getLogger().println("Path To MSBuild.exe: " + DESCRIPTOR.getPathToMsBuild());
-    	String msbuildExe = DESCRIPTOR.getPathToMsBuild();
         
-    	//Create a new commandline target with the name of the executable as the first
-    	//paramater
-        String execName=msbuildExe;
-        args.add(execName);
+        String execName= "msbuild.exe";        
+        MsBuildInstallation ai = getMsBuild();
+        if(ai==null) {
+        	listener.getLogger().println("Path To MSBuild.exe: " +execName);
+        	args.add(execName);
+        } else {
+            File exec = ai.getExecutable();
+            if(!ai.getExists()) {
+                listener.fatalError(exec+" doesn't exist");
+                return false;
+            }
+            listener.getLogger().println("Path To MSBuild.exe: " +exec.getPath());
+            args.add(exec.getPath());
+        }	 
+        
+        
+        
         
         //Remove all tabs, carriage returns, and newlines and replace them with
         //whitespaces, so that we can add them as parameters to the executable
@@ -130,25 +153,14 @@ public class MsBuildBuilder extends Builder {
      * The class is marked as public so that it can be accessed from views.
      */
     public static final class DescriptorImpl extends Descriptor<Builder> {
-        /**
-         * To persist global configuration information,
-         * simply store it in a field and call save().
-         *
-         * <p>
-         * If you don't want fields to be persisted, use <tt>transient</tt>.
-         */
-    	public static String PARAMETERNAME_PATH_TO_MSBUILD = "pathToMsBuild";
-    	private static String DEFAULT_PATH_TO_MSBUILD = "msbuild.exe";
     	
-        private String pathToMsBuild;
-
+    	
+		@CopyOnWrite
+		private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
+    	
         DescriptorImpl() {
         	super(MsBuildBuilder.class);
-            load();
-            if(pathToMsBuild==null || pathToMsBuild.length()==0){
-            	pathToMsBuild = DEFAULT_PATH_TO_MSBUILD;
-            	save();
-            }
+			load();
         }
 
         /**
@@ -160,33 +172,14 @@ public class MsBuildBuilder extends Builder {
         
         @Override
         public boolean configure(StaplerRequest req) throws FormException{
-        	// to persist global configuration information,
-            // set that to properties and call save().
-            pathToMsBuild = req.getParameter("descriptor."+PARAMETERNAME_PATH_TO_MSBUILD);
-            if(pathToMsBuild == null || pathToMsBuild.length()==0){
-            	pathToMsBuild = DEFAULT_PATH_TO_MSBUILD;
-            }
-            save();
-            return true;
+			installations = req.bindParametersToList(MsBuildInstallation.class,"msbuild.").toArray(new MsBuildInstallation[0]);
+			save();
+			return true;            
         }
 
-        /**
-         * This method returns the path to the msbuild.exe file for executing msbuild
-         */
-        public String getPathToMsBuild() {
-            return pathToMsBuild;
-        }
-
-      
-        
-        @Override
-		public Builder newInstance(StaplerRequest arg0, JSONObject arg1) throws FormException {
-        	String buildFile= arg1.getString("msBuildFile");
-        	String cmdLineArg= arg1.getString("cmdLineArgs");
-        	MsBuildBuilder builder = new MsBuildBuilder(buildFile,cmdLineArg);
-			
-			return builder;
-		}
+		public MsBuildInstallation[] getInstallations() {
+			return installations;
+		}              
 
     }
 }

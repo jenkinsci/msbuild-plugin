@@ -1,16 +1,28 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-	<!--
-		This script is the view for the global configuration for the MSBuild Builder.
-		
-		To set the value of a form field, you can call methods on the descriptor class
-		using an EL-type syntax like ${descriptor.methodName()}
-	-->
-	<f:section title="MSBuild Builder" >
-		<f:entry title="Path To msbuild.exe" 
-				help="${rootURL}/../plugin/msbuild/help-globalConfig.html" 
-				description="Location of msbuild executable">
-			<f:textbox name="descriptor.pathToMsBuild"
-						value="${descriptor.getPathToMsBuild()}"/>
-		</f:entry>
-	</f:section>
+
+  <f:section title="MSBuild Builder">
+    <f:entry title="MSBuild installation"
+      description="List of MSBuild installations on this system">
+      <f:repeatable var="inst" items="${descriptor.installations}">
+        <table width="100%">
+          
+	  <f:entry title="name">
+            <f:textbox name="msbuild.name" value="${inst.name}" />
+          </f:entry>
+
+          <f:entry title="Path To msbuild.exe" help="${rootURL}/../plugin/msbuild/help-globalConfig.html">
+            <f:textbox name="msbuild.pathToMsBuild" value="${inst.pathToMsBuild}" />
+           </f:entry>
+          
+          <f:entry title="">
+            <div align="right">
+              <f:repeatableDeleteButton />
+            </div>
+          </f:entry>
+        </table>
+      </f:repeatable>
+    </f:entry>
+  </f:section>	
+	
+	
 </j:jelly>
