@@ -9,17 +9,13 @@ import hudson.model.Descriptor;
 import hudson.model.Project;
 import hudson.tasks.Builder;
 import hudson.util.ArgumentListBuilder;
-import hudson.util.FormFieldValidator;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * Sample {@link Builder}.
@@ -38,7 +34,7 @@ import org.kohsuke.stapler.StaplerResponse;
  * 
  * @author kyle.sweeney@valtech.com
  * 2009/03/01 -- Gregory Boissinot - Zenika - Add the possibility to manage multiple Msbuild version
- *
+ * 2009/05/20 - Fix #3610
  */
 public class MsBuildBuilder extends Builder {
 
@@ -126,7 +122,7 @@ public class MsBuildBuilder extends Builder {
         }
 
         //Try to execute the command
-    	listener.getLogger().println("Executing command: "+args.toString());
+    	listener.getLogger().println("Executing command: "+args.toStringWithQuote());
     	Map<String,String> env = build.getEnvVars();
         try {
             int r = launcher.launch(args.toCommandArray(),env,listener.getLogger(),proj.getModuleRoot()).join();
