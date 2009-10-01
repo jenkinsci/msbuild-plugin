@@ -1,12 +1,12 @@
 package hudson.plugins.msbuild;
 
 import hudson.CopyOnWrite;
+import hudson.Extension;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.Build;
+import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
-import hudson.model.Project;
 import hudson.tasks.Builder;
 import hudson.util.ArgumentListBuilder;
 
@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -79,8 +80,8 @@ public class MsBuildBuilder extends Builder {
         return null;
     }	
 
-	public boolean perform(Build<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
-        Project proj = build.getProject();
+    @Override
+	public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
         ArgumentListBuilder args = new ArgumentListBuilder();
         
         String execName= "msbuild.exe";        
@@ -123,9 +124,9 @@ public class MsBuildBuilder extends Builder {
 
         //Try to execute the command
     	listener.getLogger().println("Executing command: "+args.toStringWithQuote());
-    	Map<String,String> env = build.getEnvVars();
         try {
-            int r = launcher.launch(args.toCommandArray(),env,listener.getLogger(),proj.getModuleRoot()).join();
+            Map<String,String> env = build.getEnvironment(listener);
+            int r = launcher.launch().cmds(args).envs(env).stdout(listener).pwd(build.getModuleRoot()).join();
             return r==0;
         } catch (IOException e) {
             Util.displayIOException(e,listener);
@@ -134,6 +135,7 @@ public class MsBuildBuilder extends Builder {
         }
     }
 
+    @Override
     public Descriptor<Builder> getDescriptor() {
         // see Descriptor javadoc for more about what a descriptor is.
         return DESCRIPTOR;
@@ -142,6 +144,7 @@ public class MsBuildBuilder extends Builder {
     /**
      * Descriptor should be singleton.
      */
+    @Extension
     public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 
     /**
@@ -167,7 +170,7 @@ public class MsBuildBuilder extends Builder {
         }
         
         @Override
-        public boolean configure(StaplerRequest req) throws FormException{
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException{
 			installations = req.bindParametersToList(MsBuildInstallation.class,"msbuild.").toArray(new MsBuildInstallation[0]);
 			save();
 			return true;            
