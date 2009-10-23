@@ -108,6 +108,8 @@ public class MsBuildBuilder extends Builder {
         if(normalizedTarget.trim().length()>0)
         	args.addTokenized(normalizedTarget);
         
+        args.addKeyValuePairs("-P:",build.getBuildVariables());
+        
         //If a msbuild file is specified, then add it as an argument, otherwise
         //msbuild will search for any file that ends in .proj or .sln
         if(msBuildFile != null && msBuildFile.trim().length() > 0){
