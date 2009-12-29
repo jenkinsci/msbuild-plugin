@@ -12,4 +12,17 @@
   <version>1.3-SNAPSHOT</version>
   <name>Hudson MSBuild Plugin</name>
   <url>http://wiki.hudson-ci.org/display/HUDSON/MSBuild+Plugin</url>
+  <developers>
+    <developer>
+      <id>kdsweeney</id>
+      <name>Kyle Sweeney</name>
+      <email>kyle.sweeney@valtech.com</email>
+    </developer>
+    <developer>
+       <id>gbois</id>
+       <name>Gregory Boissinot</name>
+       <email>gregory.boissinot@gmail.com</email>
+       <timezone>+1</timezone>
+    </developer>
+  </developers>
 </project>
