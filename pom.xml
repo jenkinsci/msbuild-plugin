@@ -9,7 +9,7 @@
   
   <artifactId>msbuild</artifactId>
   <packaging>hpi</packaging>
-  <version>1.3</version>
+  <version>1.4-SNAPSHOT</version>
   <name>Hudson MSBuild Plugin</name>
   <url>http://wiki.hudson-ci.org/display/HUDSON/MSBuild+Plugin</url>
   <developers>
@@ -25,10 +25,4 @@
        <timezone>+1</timezone>
     </developer>
   </developers>
-
-  <scm>
-    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/msbuild-1.3</connection>
-    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/msbuild-1.3</developerConnection>
-    <url>https://hudson.dev.java.net/source/browse/hudson/tags/msbuild-1.3</url>
-  </scm>
 </project>
