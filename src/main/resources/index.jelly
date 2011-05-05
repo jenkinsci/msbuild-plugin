@@ -1,3 +1,3 @@
 <div>
-  This plugin is a MSBuild Builder for building Visual Studio .proj and .sln files.
+    This plugin makes it possible ot build Visual Studio .proj and .sln files.
 </div>

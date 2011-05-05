@@ -1,21 +1,19 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-	<!--
-		This script defines the view on the project builders section for MSBuild Builder.
-	-->
-	
-   <f:entry title="MsBuild Version">
-    <select class="setting-input" name="msBuildBuilder.msBuildName">
-      <option>(Default)</option>
-      <j:forEach var="inst" items="${descriptor.installations}">
-        <f:option selected="${inst.name==instance.msBuildName}">${inst.name}</f:option>
-      </j:forEach>
-    </select>
-   </f:entry>	
-	
-	<f:entry title="MsBuild Build File" help="${rootURL}/../plugin/msbuild/help-BuildFile.html">
-		<f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}" />
-	</f:entry>
-	<f:entry title="Command Line Arguments" help="${rootURL}/../plugin/msbuild/help-CmdLineArgs.html">
-		<f:textbox name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
-	</f:entry>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <f:entry title="MsBuild Version">
+        <select class="setting-input" name="msBuildBuilder.msBuildName">
+            <option>(Default)</option>
+            <j:forEach var="inst" items="${descriptor.installations}">
+                <f:option selected="${inst.name==instance.msBuildName}">${inst.name}</f:option>
+            </j:forEach>
+        </select>
+    </f:entry>
+
+    <f:entry title="MsBuild Build File" help="${rootURL}/../plugin/msbuild/help-BuildFile.html">
+        <f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}"/>
+    </f:entry>
+    <f:entry title="Command Line Arguments" help="${rootURL}/../plugin/msbuild/help-CmdLineArgs.html">
+        <f:textbox name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}"/>
+    </f:entry>
 </j:jelly>

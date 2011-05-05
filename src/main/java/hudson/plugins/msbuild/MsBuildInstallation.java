@@ -3,7 +3,7 @@ package hudson.plugins.msbuild;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * @author Gregory Boissinot - Zenika
+ * @author Gregory Boissinot
  */
 public final class MsBuildInstallation {
 
