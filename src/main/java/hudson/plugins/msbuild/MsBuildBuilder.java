@@ -108,7 +108,7 @@ public class MsBuildBuilder extends Builder {
             String normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
             normalizedFile = Util.replaceMacro(normalizedFile, env);
             normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
-            if (normalizedArgs.length() > 0)
+            if (normalizedFile.length() > 0)
                 args.add(normalizedFile);
         }
 
