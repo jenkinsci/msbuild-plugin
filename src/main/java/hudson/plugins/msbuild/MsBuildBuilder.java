@@ -3,12 +3,12 @@ package hudson.plugins.msbuild;
 import hudson.*;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.tasks.Builder;
+import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
-import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
 
@@ -78,7 +78,10 @@ public class MsBuildBuilder extends Builder {
             listener.getLogger().println("Path To MSBuild.exe: " + execName);
             args.add(execName);
         } else {
-            String pathToMsBuild = ai.getPathToMsBuild();
+            EnvVars env = build.getEnvironment(listener);
+            ai = ai.forNode(Computer.currentComputer().getNode(), listener);
+            ai = ai.forEnvironment(env);
+            String pathToMsBuild = ai.getHome();
             FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
             try {
                 if (!exec.exists()) {
@@ -141,7 +144,6 @@ public class MsBuildBuilder extends Builder {
 
     public static final class DescriptorImpl extends Descriptor<Builder> {
 
-
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
 
@@ -154,16 +156,29 @@ public class MsBuildBuilder extends Builder {
             return "Build a Visual Studio project or solution using MSBuild.";
         }
 
-        @Override
-        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            installations = req.bindParametersToList(MsBuildInstallation.class, "msbuild.").toArray(new MsBuildInstallation[0]);
-            save();
-            return true;
-        }
+//        @Override
+//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+//            installations = req.bindParametersToList(MsBuildInstallation.class, "msbuild.").toArray(new MsBuildInstallation[0]);
+//            save();
+//            return true;
+//        }
 
         public MsBuildInstallation[] getInstallations() {
             return installations;
         }
 
+        public void setInstallations(MsBuildInstallation... antInstallations) {
+            this.installations = antInstallations;
+            save();
+        }
+
+        /**
+         * Obtains the {@link MsBuildInstallation.DescriptorImpl} instance.
+         */
+        public MsBuildInstallation.DescriptorImpl getToolDescriptor() {
+            return ToolInstallation.all().get(MsBuildInstallation.DescriptorImpl.class);
+        }
+
     }
+
 }

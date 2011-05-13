@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -22,15 +23,15 @@
 
     <developers>
         <developer>
-            <id>kdsweeney</id>
-            <name>Kyle Sweeney</name>
-            <email>kyle.sweeney@valtech.com</email>
-        </developer>
-        <developer>
             <id>gbois</id>
             <name>Gregory Boissinot</name>
             <email>gregory.boissinot@gmail.com</email>
             <timezone>+1</timezone>
+        </developer>
+        <developer>
+            <id>kdsweeney</id>
+            <name>Kyle Sweeney</name>
+            <email>kyle.sweeney@valtech.com</email>
         </developer>
     </developers>
 
