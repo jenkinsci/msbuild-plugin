@@ -97,13 +97,14 @@ public class MsBuildBuilder extends Builder {
         }
 
         EnvVars env = build.getEnvironment(listener);
+
         String normalizedArgs = cmdLineArgs.replaceAll("[\t\r\n]+", " ");
         normalizedArgs = Util.replaceMacro(normalizedArgs, env);
         normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
         if (normalizedArgs.trim().length() > 0)
             args.addTokenized(normalizedArgs);
 
-        args.addKeyValuePairs("-P:", build.getBuildVariables());
+        args.addKeyValuePairs("/P:", build.getBuildVariables());
 
         //If a msbuild file is specified, then add it as an argument, otherwise
         //msbuild will search for any file that ends in .proj or .sln
@@ -156,12 +157,6 @@ public class MsBuildBuilder extends Builder {
             return "Build a Visual Studio project or solution using MSBuild.";
         }
 
-//        @Override
-//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-//            installations = req.bindParametersToList(MsBuildInstallation.class, "msbuild.").toArray(new MsBuildInstallation[0]);
-//            save();
-//            return true;
-//        }
 
         public MsBuildInstallation[] getInstallations() {
             return installations;
