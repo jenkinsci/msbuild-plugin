@@ -96,6 +96,10 @@ public class MsBuildBuilder extends Builder {
             args.add(pathToMsBuild);
         }
 
+        if (ai.getDefaultargs() != "") {
+            args.add(ai.getDefaultargs());
+        }
+
         EnvVars env = build.getEnvironment(listener);
 
         String normalizedArgs = cmdLineArgs.replaceAll("[\t\r\n]+", " ");

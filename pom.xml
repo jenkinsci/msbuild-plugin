@@ -4,7 +4,8 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.410</version>
+        <version>1.440</version>
+        <relativePath />
     </parent>
 
     <artifactId>msbuild</artifactId>
@@ -38,5 +39,12 @@
         <connection>scm:git:git://github.com/jenkinsci/msbuild-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/msbuild-plugin.git</developerConnection>
     </scm>
+
+  <repositories>
+    <repository>
+      <id>m.g.o-public</id>
+      <url>http://maven.glassfish.org/content/groups/public/</url>
+    </repository>
+  </repositories>
 
 </project>
