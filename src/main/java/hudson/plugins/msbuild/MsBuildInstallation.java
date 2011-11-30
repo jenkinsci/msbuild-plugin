@@ -61,4 +61,16 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         }
 
     }
+
+    /**
+     * Used for backward compatibility
+     *
+     * @return the new object, an instance of MsBuildInstallation
+     */
+    protected Object readResolve() {
+        if (this.pathToMsBuild != null) {
+            return new MsBuildInstallation(this.getName(), this.pathToMsBuild, this.defaultArgs);
+        }
+        return this;
+    }
 }
