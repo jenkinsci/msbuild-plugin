@@ -23,18 +23,24 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
      * Backward compat
      */
     private transient String pathToMsBuild;
+    private String defaultArgs;
 
     @DataBoundConstructor
-    public MsBuildInstallation(String name, String home) {
+    public MsBuildInstallation(String name, String home, String defaultArgs) {
         super(name, home, null);
+        this.defaultArgs = defaultArgs;
     }
 
     public MsBuildInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MsBuildInstallation(getName(), translateFor(node, log));
+        return new MsBuildInstallation(getName(), translateFor(node, log), getDefaultargs());
     }
 
     public MsBuildInstallation forEnvironment(EnvVars environment) {
-        return new MsBuildInstallation(getName(), environment.expand(getHome()));
+        return new MsBuildInstallation(getName(), environment.expand(getHome()), getDefaultargs());
+    }
+
+    public String getDefaultargs() {
+        return this.defaultArgs;
     }
 
     @Extension
@@ -59,13 +65,12 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
     /**
      * Used for backward compatibility
      *
-     * @return the new object, an instance of  CopyArchiverPublisher
+     * @return the new object, an instance of MsBuildInstallation
      */
-    private Object readResolve() {
+    protected Object readResolve() {
         if (this.pathToMsBuild != null) {
-            return new MsBuildInstallation(this.getName(), this.pathToMsBuild);
+            return new MsBuildInstallation(this.getName(), this.pathToMsBuild, this.defaultArgs);
         }
         return this;
     }
-
 }
