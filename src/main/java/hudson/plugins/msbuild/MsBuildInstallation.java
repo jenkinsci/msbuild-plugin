@@ -2,6 +2,7 @@ package hudson.plugins.msbuild;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.EnvironmentSpecific;
 import hudson.model.Hudson;
 import hudson.model.Node;
@@ -20,26 +21,27 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
 
     @SuppressWarnings("unused")
     /**
-     * Backward compat
+     * Backward compatibility
      */
     private transient String pathToMsBuild;
+
     private String defaultArgs;
 
     @DataBoundConstructor
     public MsBuildInstallation(String name, String home, String defaultArgs) {
         super(name, home, null);
-        this.defaultArgs = defaultArgs;
+        this.defaultArgs = Util.fixEmpty(defaultArgs);
     }
 
     public MsBuildInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MsBuildInstallation(getName(), translateFor(node, log), getDefaultargs());
+        return new MsBuildInstallation(getName(), translateFor(node, log), getDefaultArgs());
     }
 
     public MsBuildInstallation forEnvironment(EnvVars environment) {
-        return new MsBuildInstallation(getName(), environment.expand(getHome()), getDefaultargs());
+        return new MsBuildInstallation(getName(), environment.expand(getHome()), getDefaultArgs());
     }
 
-    public String getDefaultargs() {
+    public String getDefaultArgs() {
         return this.defaultArgs;
     }
 

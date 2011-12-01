@@ -14,11 +14,6 @@ import java.io.IOException;
 
 /**
  * @author kyle.sweeney@valtech.com
- * @author Gregory Boissinot - Zenika
- *         2009/03/01 - Added the possibility to manage multiple Msbuild version
- *         2009/05/20 - Fixed #3610
- *         2010/04/02 - Fixed #4121
- *         2010/05/05 - Added environment and build variables resolving in fields
  */
 public class MsBuildBuilder extends Builder {
 
@@ -96,8 +91,8 @@ public class MsBuildBuilder extends Builder {
             args.add(pathToMsBuild);
         }
 
-        if (ai.getDefaultargs() != "") {
-            args.add(ai.getDefaultargs());
+        if (ai.getDefaultArgs() != null) {
+            args.add(ai.getDefaultArgs());
         }
 
         EnvVars env = build.getEnvironment(listener);
