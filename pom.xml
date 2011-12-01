@@ -10,7 +10,7 @@
 
     <artifactId>msbuild</artifactId>
     <packaging>hpi</packaging>
-    <version>1.8-SNAPSHOT</version>
+    <version>1.8</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
 
