@@ -92,7 +92,7 @@ public class MsBuildBuilder extends Builder {
         }
 
         if (ai.getDefaultArgs() != null) {
-            args.add(ai.getDefaultArgs());
+            args.addTokenized(ai.getDefaultArgs());
         }
 
         EnvVars env = build.getEnvironment(listener);
