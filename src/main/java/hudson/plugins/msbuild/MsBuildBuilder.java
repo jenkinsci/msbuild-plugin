@@ -89,14 +89,13 @@ public class MsBuildBuilder extends Builder {
             }
             listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
             args.add(pathToMsBuild);
-        }
 
-        if (ai.getDefaultArgs() != null) {
-            args.addTokenized(ai.getDefaultArgs());
+            if (ai.getDefaultArgs() != null) {
+                args.addTokenized(ai.getDefaultArgs());
+            }
         }
 
         EnvVars env = build.getEnvironment(listener);
-
         String normalizedArgs = cmdLineArgs.replaceAll("[\t\r\n]+", " ");
         normalizedArgs = Util.replaceMacro(normalizedArgs, env);
         normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
