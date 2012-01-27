@@ -11,6 +11,7 @@ import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author kyle.sweeney@valtech.com
@@ -102,7 +103,18 @@ public class MsBuildBuilder extends Builder {
         if (normalizedArgs.trim().length() > 0)
             args.addTokenized(normalizedArgs);
 
-        args.addKeyValuePairs("/P:", build.getBuildVariables());
+        //Build ﻿/P:key1=value1;key2=value2 ...
+        Map<String, String> variables = build.getBuildVariables();
+        if (variables.size() != 0) {
+            StringBuffer parameters = new StringBuffer();
+            parameters.append("/P:");
+            for (Map.Entry<String, String> entry : variables.entrySet()) {
+                parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+            }
+
+            parameters.delete(parameters.length()-1, parameters.length());
+            args.add(parameters.toString());
+        }
 
         //If a msbuild file is specified, then add it as an argument, otherwise
         //msbuild will search for any file that ends in .proj or .sln
