@@ -1,10 +1,8 @@
 package hudson.plugins.msbuild;
 
 import hudson.*;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.model.Computer;
-import hudson.model.Descriptor;
+import hudson.model.*;
+import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
@@ -112,7 +110,7 @@ public class MsBuildBuilder extends Builder {
                 parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
             }
 
-            parameters.delete(parameters.length()-1, parameters.length());
+            parameters.delete(parameters.length() - 1, parameters.length());
             args.add(parameters.toString());
         }
 
@@ -166,12 +164,11 @@ public class MsBuildBuilder extends Builder {
         public String getDisplayName() {
             return "Build a Visual Studio project or solution using MSBuild.";
         }
-        
-        @Override        
-        public boolean isApplicable(Class<? extends AbstractProject> jobType){
+
+        @Override
+        public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
-
 
         public MsBuildInstallation[] getInstallations() {
             return installations;
@@ -182,9 +179,6 @@ public class MsBuildBuilder extends Builder {
             save();
         }
 
-        /**
-         * Obtains the {@link MsBuildInstallation.DescriptorImpl} instance.
-         */
         public MsBuildInstallation.DescriptorImpl getToolDescriptor() {
             return ToolInstallation.all().get(MsBuildInstallation.DescriptorImpl.class);
         }
