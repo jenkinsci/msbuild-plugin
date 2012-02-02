@@ -153,7 +153,7 @@ public class MsBuildBuilder extends Builder {
     @Extension
     public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 
-    public static final class DescriptorImpl extends Descriptor<Builder> {
+    public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
@@ -165,6 +165,11 @@ public class MsBuildBuilder extends Builder {
 
         public String getDisplayName() {
             return "Build a Visual Studio project or solution using MSBuild.";
+        }
+        
+        @Override        
+        public boolean isApplicable(Class<? extends AbstractProject> jobType){
+            return true;
         }
 
 
