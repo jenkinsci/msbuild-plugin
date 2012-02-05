@@ -105,7 +105,7 @@ public class MsBuildBuilder extends Builder {
         Map<String, String> variables = build.getBuildVariables();
         if (variables.size() != 0) {
             StringBuffer parameters = new StringBuffer();
-            parameters.append("/P:");
+            parameters.append("/p:");
             for (Map.Entry<String, String> entry : variables.entrySet()) {
                 parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
             }
