@@ -15,7 +15,8 @@
     </f:entry>
     <f:advanced>
         <f:entry title="Pass build variables as properties" help="${rootURL}/../plugin/msbuild/help-BuildVariablesAsProperties.html">
-            <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}" default="true" />
+            <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
+                checked="${instance.buildVariablesAsProperties}" default="true" />
         </f:entry>
     </f:advanced>
 </j:jelly>
