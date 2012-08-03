@@ -22,6 +22,7 @@ public class MsBuildBuilder extends Builder {
     private final String msBuildFile;
     private final String cmdLineArgs;
     private final boolean buildVariablesAsProperties;
+    private final boolean continueOnBuilFailure;
 
     /**
      * When this builder is created in the project configuration step,
@@ -31,14 +32,16 @@ public class MsBuildBuilder extends Builder {
      * @param msBuildFile The name/location of the MSBuild file
      * @param cmdLineArgs Whitespace separated list of command line arguments
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
+     * @param continueOnBuilFailure If true, pass build variables as properties to MSBuild
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
-    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties) {
+    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuilFailure) {
         this.msBuildName = msBuildName;
         this.msBuildFile = msBuildFile;
         this.cmdLineArgs = cmdLineArgs;
         this.buildVariablesAsProperties = buildVariablesAsProperties;
+        this.continueOnBuilFailure = continueOnBuilFailure;
     }
 
     @SuppressWarnings("unused")
@@ -61,6 +64,11 @@ public class MsBuildBuilder extends Builder {
         return buildVariablesAsProperties;
     }
 
+    @SuppressWarnings("unused")
+    public boolean getContinueOnBuilFailure() {
+        return continueOnBuilFailure;
+    }
+    
     public MsBuildInstallation getMsBuild() {
         for (MsBuildInstallation i : DESCRIPTOR.getInstallations()) {
             if (msBuildName != null && i.getName().equals(msBuildName))
@@ -147,8 +155,12 @@ public class MsBuildBuilder extends Builder {
 
         try {
             int r = launcher.launch().cmds(args).envs(env).stdout(listener).pwd(build.getModuleRoot()).join();
-
-            return r == 0;
+               
+            if(continueOnBuilFailure){
+                return true;
+            } else {
+                return r == 0;
+            }
         } catch (IOException e) {
             Util.displayIOException(e, listener);
             e.printStackTrace(listener.fatalError("command execution failed"));
