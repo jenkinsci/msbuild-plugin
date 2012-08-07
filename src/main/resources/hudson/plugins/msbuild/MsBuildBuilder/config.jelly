@@ -18,5 +18,9 @@
             <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
                 checked="${instance.buildVariablesAsProperties}" default="true" />
         </f:entry>
+        <f:entry title="Continue Job on build Failure" help="${rootURL}/../plugin/msbuild/help-ContinueOnBuilFailure.html">
+            <f:checkbox name="msBuildBuilder.continueOnBuilFailure" value="${instance.continueOnBuilFailure}"
+                checked="${instance.continueOnBuilFailure}" default="true" />
+        </f:entry>        
     </f:advanced>
 </j:jelly>
