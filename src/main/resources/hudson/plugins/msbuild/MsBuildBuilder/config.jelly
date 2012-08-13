@@ -20,7 +20,7 @@
         </f:entry>
         <f:entry title="Continue Job on build Failure" help="${rootURL}/../plugin/msbuild/help-ContinueOnBuilFailure.html">
             <f:checkbox name="msBuildBuilder.continueOnBuilFailure" value="${instance.continueOnBuilFailure}"
-                checked="${instance.continueOnBuilFailure}" default="true" />
+                checked="${instance.continueOnBuilFailure}" default="false" />
         </f:entry>        
     </f:advanced>
 </j:jelly>
