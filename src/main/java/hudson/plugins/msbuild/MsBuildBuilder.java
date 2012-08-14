@@ -22,26 +22,27 @@ public class MsBuildBuilder extends Builder {
     private final String msBuildFile;
     private final String cmdLineArgs;
     private final boolean buildVariablesAsProperties;
-    private final boolean continueOnBuilFailure;
+    private transient boolean continueOnBuilFailure;
+    private final boolean continueOnBuildFailure;
 
     /**
      * When this builder is created in the project configuration step,
      * the builder object will be created from the strings below.
      *
-     * @param msBuildName The Visual Studio logical name
-     * @param msBuildFile The name/location of the MSBuild file
-     * @param cmdLineArgs Whitespace separated list of command line arguments
+     * @param msBuildName                The Visual Studio logical name
+     * @param msBuildFile                The name/location of the MSBuild file
+     * @param cmdLineArgs                Whitespace separated list of command line arguments
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
-     * @param continueOnBuilFailure If true, pass build variables as properties to MSBuild
+     * @param continueOnBuildFailure      If true, pass build variables as properties to MSBuild
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
-    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuilFailure) {
+    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure) {
         this.msBuildName = msBuildName;
         this.msBuildFile = msBuildFile;
         this.cmdLineArgs = cmdLineArgs;
         this.buildVariablesAsProperties = buildVariablesAsProperties;
-        this.continueOnBuilFailure = continueOnBuilFailure;
+        this.continueOnBuildFailure = continueOnBuildFailure;
     }
 
     @SuppressWarnings("unused")
@@ -65,10 +66,10 @@ public class MsBuildBuilder extends Builder {
     }
 
     @SuppressWarnings("unused")
-    public boolean getContinueOnBuilFailure() {
+    public boolean getContinueOnBuildFailure() {
         return continueOnBuilFailure;
     }
-    
+
     public MsBuildInstallation getMsBuild() {
         for (MsBuildInstallation i : DESCRIPTOR.getInstallations()) {
             if (msBuildName != null && i.getName().equals(msBuildName))
@@ -126,24 +127,37 @@ public class MsBuildBuilder extends Builder {
         if (buildVariablesAsProperties && variables.size() != 0) {
             StringBuffer parameters = new StringBuffer();
             parameters.append("/p:");
-
             for (Map.Entry<String, String> entry : variables.entrySet()) {
                 parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
             }
-
             parameters.delete(parameters.length() - 1, parameters.length());
             args.add(parameters.toString());
         }
 
         //If a msbuild file is specified, then add it as an argument, otherwise
         //msbuild will search for any file that ends in .proj or .sln
-        if (msBuildFile != null && msBuildFile.trim().length() > 0) {
-            String normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
+        String normalizedFile = null;
+        if (msBuildFile != null && msBuildFile.trim().length() != 0) {
+            normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
             normalizedFile = Util.replaceMacro(normalizedFile, env);
             normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
-
-            if (normalizedFile.length() > 0)
+            if (normalizedFile.length() > 0) {
                 args.add(normalizedFile);
+            }
+        }
+
+        FilePath pwd = build.getModuleRoot();
+        if (normalizedFile != null) {
+            FilePath msBuildFilePath = pwd.child(normalizedFile);
+            if (!msBuildFilePath.exists()) {
+                pwd = build.getWorkspace();
+                msBuildFilePath = pwd.child(normalizedFile);
+                if (!msBuildFilePath.exists()) {
+                    listener.fatalError(String.format("Can't find %s file", normalizedFile));
+                    build.setResult(Result.FAILURE);
+                    return false;
+                }
+            }
         }
 
         if (!launcher.isUnix()) {
@@ -151,20 +165,13 @@ public class MsBuildBuilder extends Builder {
             args.add("&&", "exit", "%%ERRORLEVEL%%");
         }
 
-        listener.getLogger().println("Executing command: " + args.toStringWithQuote());
-
         try {
-            int r = launcher.launch().cmds(args).envs(env).stdout(listener).pwd(build.getModuleRoot()).join();
-               
-            if(continueOnBuilFailure){
-                return true;
-            } else {
-                return r == 0;
-            }
+            listener.getLogger().println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
+            int r = launcher.launch().cmds(args).envs(env).stdout(listener).pwd(pwd).join();
+            return continueOnBuildFailure ? true : (r == 0);
         } catch (IOException e) {
             Util.displayIOException(e, listener);
-            e.printStackTrace(listener.fatalError("command execution failed"));
-
+            build.setResult(Result.FAILURE);
             return false;
         }
     }
