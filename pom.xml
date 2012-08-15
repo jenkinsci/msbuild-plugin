@@ -9,7 +9,7 @@
 
     <artifactId>msbuild</artifactId>
     <packaging>hpi</packaging>
-    <version>1.15</version>
+    <version>1.16-SNAPSHOT</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
 
