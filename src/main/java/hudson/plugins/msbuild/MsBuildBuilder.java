@@ -67,7 +67,7 @@ public class MsBuildBuilder extends Builder {
 
     @SuppressWarnings("unused")
     public boolean getContinueOnBuildFailure() {
-        return continueOnBuilFailure;
+        return continueOnBuildFailure;
     }
 
     public MsBuildInstallation getMsBuild() {
