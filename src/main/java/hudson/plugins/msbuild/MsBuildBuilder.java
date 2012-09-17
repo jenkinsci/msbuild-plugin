@@ -33,7 +33,7 @@ public class MsBuildBuilder extends Builder {
      * @param msBuildFile                The name/location of the MSBuild file
      * @param cmdLineArgs                Whitespace separated list of command line arguments
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
-     * @param continueOnBuildFailure      If true, pass build variables as properties to MSBuild
+     * @param continueOnBuildFailure     If true, pass build variables as properties to MSBuild
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
@@ -151,12 +151,6 @@ public class MsBuildBuilder extends Builder {
             FilePath msBuildFilePath = pwd.child(normalizedFile);
             if (!msBuildFilePath.exists()) {
                 pwd = build.getWorkspace();
-                msBuildFilePath = pwd.child(normalizedFile);
-                if (!msBuildFilePath.exists()) {
-                    listener.fatalError(String.format("Can't find %s file", normalizedFile));
-                    build.setResult(Result.FAILURE);
-                    return false;
-                }
             }
         }
 
