@@ -9,6 +9,7 @@ import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.Map;
 
 /**
@@ -128,7 +129,8 @@ public class MsBuildBuilder extends Builder {
             StringBuffer parameters = new StringBuffer();
             parameters.append("/p:");
             for (Map.Entry<String, String> entry : variables.entrySet()) {
-                parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+                String value = URLEncoder.encode(entry.getValue(), "UTF-8");
+                parameters.append(entry.getKey()).append("=").append(value).append(";");
             }
             parameters.delete(parameters.length() - 1, parameters.length());
             args.add(parameters.toString());
