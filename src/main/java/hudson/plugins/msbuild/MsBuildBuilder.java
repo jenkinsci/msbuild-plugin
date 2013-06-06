@@ -6,6 +6,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.QuotedStringTokenizer;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -72,7 +73,8 @@ public class MsBuildBuilder extends Builder {
     }
 
     public MsBuildInstallation getMsBuild() {
-        for (MsBuildInstallation i : DESCRIPTOR.getInstallations()) {
+        DescriptorImpl descriptor = (DescriptorImpl)getDescriptor();
+        for (MsBuildInstallation i : descriptor.getInstallations()) {
             if (msBuildName != null && i.getName().equals(msBuildName))
                 return i;
         }
@@ -110,7 +112,7 @@ public class MsBuildBuilder extends Builder {
             args.add(pathToMsBuild);
 
             if (ai.getDefaultArgs() != null) {
-                args.addTokenized(ai.getDefaultArgs());
+                args.add(tokenizeArgs(ai.getDefaultArgs()));
             }
         }
 
@@ -120,7 +122,7 @@ public class MsBuildBuilder extends Builder {
         normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
 
         if (normalizedArgs.trim().length() > 0)
-            args.addTokenized(normalizedArgs);
+            args.add(tokenizeArgs(normalizedArgs));
 
         //Build ﻿/P:key1=value1;key2=value2 ...
         Map<String, String> variables = build.getBuildVariables();
@@ -174,20 +176,25 @@ public class MsBuildBuilder extends Builder {
 
     @Override
     public Descriptor<Builder> getDescriptor() {
-        return DESCRIPTOR;
+        return (DescriptorImpl)super.getDescriptor();
     }
 
     /**
-     * Descriptor should be singleton.
+     * Tokenize a set of arguments, preserving quotes.
+     * @param args
+     * @return 
      */
-    @Extension
-    public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+    static String[] tokenizeArgs(String args) {
+        QuotedStringTokenizer tokenizer = new QuotedStringTokenizer(args, " \t\n\r\f", false, true);
+        return tokenizer.toArray();
+    }
 
+    @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
 
-        DescriptorImpl() {
+        public DescriptorImpl() {
             super(MsBuildBuilder.class);
             load();
         }
