@@ -185,8 +185,7 @@ public class MsBuildBuilder extends Builder {
      * @return 
      */
     static String[] tokenizeArgs(String args) {
-        QuotedStringTokenizer tokenizer = new QuotedStringTokenizer(args, " \t\n\r\f", false, true);
-        return tokenizer.toArray();
+        return Util.tokenize(args);
     }
 
     @Extension
