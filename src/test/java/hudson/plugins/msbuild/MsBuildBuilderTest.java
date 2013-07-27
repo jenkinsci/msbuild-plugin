@@ -10,13 +10,14 @@ import static org.junit.Assert.*;
 public class MsBuildBuilderTest {
     
     @Test
-    public void shouldRetainQuotedArguments() {
-        final String platform = "/p:Platform=\"Any CPU\"";
+    public void shouldStripQuotedArguments() {
+        final String quotedPlatform = "/p:Platform=\"Any CPU\"";
+        final String strippedPlatform = "/p:Platform=Any CPU";
         
-        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(platform);
+        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(quotedPlatform);
         assertNotNull(tokenizedArgs);
         assertEquals(1, tokenizedArgs.length);
-        assertEquals(platform, tokenizedArgs[0]);
+        assertEquals(strippedPlatform, tokenizedArgs[0]);
     }
 
     @Test
