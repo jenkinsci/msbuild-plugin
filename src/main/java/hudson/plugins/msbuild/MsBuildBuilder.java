@@ -35,7 +35,7 @@ public class MsBuildBuilder extends Builder {
      * @param msBuildFile                The name/location of the MSBuild file
      * @param cmdLineArgs                Whitespace separated list of command line arguments
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
-     * @param continueOnBuildFailure     If true, pass build variables as properties to MSBuild
+     * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
@@ -124,7 +124,7 @@ public class MsBuildBuilder extends Builder {
         if (normalizedArgs.trim().length() > 0)
             args.add(tokenizeArgs(normalizedArgs));
 
-        //Build ﻿/P:key1=value1;key2=value2 ...
+        //Build /P:key1=value1;key2=value2 ...
         Map<String, String> variables = build.getBuildVariables();
 
         if (buildVariablesAsProperties && variables.size() != 0) {
