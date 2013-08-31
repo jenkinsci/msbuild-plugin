@@ -9,6 +9,7 @@ import hudson.util.ArgumentListBuilder;
 import hudson.util.QuotedStringTokenizer;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class MsBuildBuilder extends Builder {
     private final boolean buildVariablesAsProperties;
     private transient boolean continueOnBuilFailure;
     private final boolean continueOnBuildFailure;
+    private final boolean unstableIfWarnings;
 
     /**
      * When this builder is created in the project configuration step,
@@ -35,16 +37,18 @@ public class MsBuildBuilder extends Builder {
      * @param msBuildFile                The name/location of the MSBuild file
      * @param cmdLineArgs                Whitespace separated list of command line arguments
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
-     * @param continueOnBuildFailure     If true, pass build variables as properties to MSBuild
+     * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
+     * @param unstableIfWarnings         If true, job will be unstable if there are warnings
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
-    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure) {
+    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
         this.msBuildName = msBuildName;
         this.msBuildFile = msBuildFile;
         this.cmdLineArgs = cmdLineArgs;
         this.buildVariablesAsProperties = buildVariablesAsProperties;
         this.continueOnBuildFailure = continueOnBuildFailure;
+        this.unstableIfWarnings = unstableIfWarnings;
     }
 
     @SuppressWarnings("unused")
@@ -70,6 +74,11 @@ public class MsBuildBuilder extends Builder {
     @SuppressWarnings("unused")
     public boolean getContinueOnBuildFailure() {
         return continueOnBuildFailure;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean getUnstableIfWarnings() {
+        return unstableIfWarnings;
     }
 
     public MsBuildInstallation getMsBuild() {
@@ -124,7 +133,7 @@ public class MsBuildBuilder extends Builder {
         if (normalizedArgs.trim().length() > 0)
             args.add(tokenizeArgs(normalizedArgs));
 
-        //Build ﻿/P:key1=value1;key2=value2 ...
+        //Build /P:key1=value1;key2=value2 ...
         Map<String, String> variables = build.getBuildVariables();
 
         if (buildVariablesAsProperties && variables.size() != 0) {
@@ -165,7 +174,16 @@ public class MsBuildBuilder extends Builder {
 
         try {
             listener.getLogger().println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
-            int r = launcher.launch().cmds(args).envs(env).stdout(listener).pwd(pwd).join();
+            // Parser to find the number of Warnings/Errors
+            MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
+            // Launch the msbuild.exe
+            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).pwd(pwd).join();
+            // Check the number of warnings
+            if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
+                listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
+                build.setResult(Result.UNSTABLE);
+            }
+            // Return the result of the compilation
             return continueOnBuildFailure ? true : (r == 0);
         } catch (IOException e) {
             Util.displayIOException(e, listener);
