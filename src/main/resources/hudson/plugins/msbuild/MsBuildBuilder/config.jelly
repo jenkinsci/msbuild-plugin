@@ -13,11 +13,11 @@
     <f:entry title="Command Line Arguments" help="${rootURL}/../plugin/msbuild/help-cmdLineArgs.html">
         <f:textbox name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
     </f:entry>
+    <f:entry title="Pass build variables as properties" help="${rootURL}/../plugin/msbuild/help-buildVariablesAsProperties.html">
+        <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
+                        checked="${instance.buildVariablesAsProperties}" default="false" />
+    </f:entry>
     <f:advanced>
-        <f:entry title="Pass build variables as properties" help="${rootURL}/../plugin/msbuild/help-buildVariablesAsProperties.html">
-            <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
-                checked="${instance.buildVariablesAsProperties}" default="true" />
-        </f:entry>
         <f:entry title="Continue Job on build Failure" help="${rootURL}/../plugin/msbuild/help-continueOnBuildFailure.html">
             <f:checkbox name="msBuildBuilder.continueOnBuildFailure" value="${instance.continueOnBuildFailure}"
                 checked="${instance.continueOnBuildFailure}" default="false" />
