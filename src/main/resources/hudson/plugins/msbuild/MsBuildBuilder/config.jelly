@@ -22,7 +22,7 @@
             <f:checkbox name="msBuildBuilder.continueOnBuildFailure" value="${instance.continueOnBuildFailure}"
                 checked="${instance.continueOnBuildFailure}" default="false" />
         </f:entry>
-        <f:entry title="If warnings set the build to Unstable" help="${rootURL}/../plugin/msbuild/help-unstableIfWarnings.html">
+        <f:entry title="If warnings set the build to Unstable" help="${rootURL}/../plugin/msbuild/help-UnstableIfWarnings.html">
             <f:checkbox name="msBuildBuilder.unstableIfWarnings" value="${instance.unstableIfWarnings}"
                 checked="${instance.unstableIfWarnings}" default="false" />
         </f:entry>
