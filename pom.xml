@@ -9,7 +9,7 @@
 
     <artifactId>msbuild</artifactId>
     <packaging>hpi</packaging>
-    <version>1.22-SNAPSHOT</version>
+    <version>1.22</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
 
@@ -37,7 +37,8 @@
     <scm>
         <connection>scm:git:git://github.com/jenkinsci/msbuild-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/msbuild-plugin.git</developerConnection>
-    </scm>
+      <tag>msbuild-1.22</tag>
+  </scm>
 
     <repositories>
         <repository>
