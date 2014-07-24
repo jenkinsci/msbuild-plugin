@@ -1,5 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry title="MSBuild Version">
+    <f:entry title="${%MSBuild Version}">
         <select class="setting-input" name="msBuildBuilder.msBuildName">
             <option>(Default)</option>
             <j:forEach var="inst" items="${descriptor.installations}">
@@ -7,22 +7,22 @@
             </j:forEach>
         </select>
     </f:entry>
-    <f:entry title="MSBuild Build File" help="${rootURL}/../plugin/msbuild/help-BuildFile.html">
+    <f:entry title="${%MSBuild Build File}" field="msBuildFile">
         <f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}" />
     </f:entry>
-    <f:entry title="Command Line Arguments" help="${rootURL}/../plugin/msbuild/help-CmdLineArgs.html">
+    <f:entry title="${%Command Line Arguments}" field="cmdLineArgs">
         <f:textbox name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
     </f:entry>
-    <f:entry title="Pass build variables as properties" help="${rootURL}/../plugin/msbuild/help-BuildVariablesAsProperties.html">
+    <f:entry title="${%Pass build variables as properties}" field="buildVariablesAsProperties">
         <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
                         checked="${instance.buildVariablesAsProperties}" default="false" />
     </f:entry>
     <f:advanced>
-        <f:entry title="Continue Job on build Failure" help="${rootURL}/../plugin/msbuild/help-ContinueOnBuildFailure.html">
+        <f:entry title="${%Continue Job on build Failure}" field="continueOnBuildFailure">
             <f:checkbox name="msBuildBuilder.continueOnBuildFailure" value="${instance.continueOnBuildFailure}"
                 checked="${instance.continueOnBuildFailure}" default="false" />
         </f:entry>
-        <f:entry title="If warnings set the build to Unstable" help="${rootURL}/../plugin/msbuild/help-UnstableIfWarnings.html">
+        <f:entry title="${%If warnings set the build to Unstable}" field="unstableIfWarnings">
             <f:checkbox name="msBuildBuilder.unstableIfWarnings" value="${instance.unstableIfWarnings}"
                 checked="${instance.unstableIfWarnings}" default="false" />
         </f:entry>

@@ -217,7 +217,7 @@ public class MsBuildBuilder extends Builder {
         }
 
         public String getDisplayName() {
-            return "Build a Visual Studio project or solution using MSBuild";
+            return Messages.MsBuildBuilder_DisplayName();
         }
 
         @Override
