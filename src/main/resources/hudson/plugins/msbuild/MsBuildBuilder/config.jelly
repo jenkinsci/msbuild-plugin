@@ -11,7 +11,7 @@
         <f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}" />
     </f:entry>
     <f:entry title="${%Command Line Arguments}" field="cmdLineArgs">
-        <f:textbox name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
+        <f:textarea name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
     </f:entry>
     <f:entry title="${%Pass build variables as properties}" field="buildVariablesAsProperties">
         <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
