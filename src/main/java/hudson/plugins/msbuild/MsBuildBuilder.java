@@ -168,8 +168,8 @@ public class MsBuildBuilder extends Builder {
         }
 
         if (!launcher.isUnix()) {
-            args.prepend("cmd.exe", "/C");
-            args.add("&&", "exit", "%%ERRORLEVEL%%");
+            args.prepend("cmd.exe", "/C", "\"");
+            args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
         }
 
         try {
