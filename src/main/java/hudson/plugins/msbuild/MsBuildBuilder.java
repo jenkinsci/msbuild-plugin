@@ -6,10 +6,8 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
-import hudson.util.QuotedStringTokenizer;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Map;
@@ -82,7 +80,7 @@ public class MsBuildBuilder extends Builder {
     }
 
     public MsBuildInstallation getMsBuild() {
-        DescriptorImpl descriptor = (DescriptorImpl)getDescriptor();
+        DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
         for (MsBuildInstallation i : descriptor.getInstallations()) {
             if (msBuildName != null && i.getName().equals(msBuildName))
                 return i;
@@ -194,16 +192,32 @@ public class MsBuildBuilder extends Builder {
 
     @Override
     public Descriptor<Builder> getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     /**
      * Tokenize a set of arguments, preserving quotes.
+     *
      * @param args
-     * @return 
+     * @return
      */
     static String[] tokenizeArgs(String args) {
-        return Util.tokenize(args);
+
+        if (args == null) {
+            return null;
+        }
+
+        final String[] tokenize = Util.tokenize(args);
+
+        if (tokenize == null) {
+            return null;
+        }
+
+        if (args != null && args.endsWith("\\")) {
+            tokenize[tokenize.length - 1] = tokenize[tokenize.length - 1] + "\\";
+        }
+
+        return tokenize;
     }
 
     @Extension
