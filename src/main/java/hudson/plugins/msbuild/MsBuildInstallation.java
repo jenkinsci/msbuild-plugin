@@ -4,12 +4,12 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.EnvironmentSpecific;
-import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.slaves.NodeSpecific;
 import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -18,12 +18,6 @@ import java.io.IOException;
  * @author Gregory Boissinot
  */
 public final class MsBuildInstallation extends ToolInstallation implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
-
-    @SuppressWarnings("unused")
-    /**
-     * Backward compatibility
-     */
-    private transient String pathToMsBuild;
 
     private String defaultArgs;
 
@@ -54,25 +48,14 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
 
         @Override
         public MsBuildInstallation[] getInstallations() {
-            return Hudson.getInstance().getDescriptorByType(MsBuildBuilder.DescriptorImpl.class).getInstallations();
+            return Jenkins.getInstance().getDescriptorByType(MsBuildBuilder.DescriptorImpl.class).getInstallations();
         }
 
         @Override
         public void setInstallations(MsBuildInstallation... installations) {
-            Hudson.getInstance().getDescriptorByType(MsBuildBuilder.DescriptorImpl.class).setInstallations(installations);
+            Jenkins.getInstance().getDescriptorByType(MsBuildBuilder.DescriptorImpl.class).setInstallations(installations);
         }
 
     }
 
-    /**
-     * Used for backward compatibility
-     *
-     * @return the new object, an instance of MsBuildInstallation
-     */
-    protected Object readResolve() {
-        if (this.pathToMsBuild != null) {
-            return new MsBuildInstallation(this.getName(), this.pathToMsBuild, this.defaultArgs);
-        }
-        return this;
-    }
 }
