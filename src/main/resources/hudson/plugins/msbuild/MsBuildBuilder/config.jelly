@@ -8,23 +8,23 @@
         </select>
     </f:entry>
     <f:entry title="${%MSBuild Build File}" field="msBuildFile">
-        <f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}" />
+        <f:textbox name="msBuildBuilder.msBuildFile" value="${instance.msBuildFile}"/>
     </f:entry>
     <f:entry title="${%Command Line Arguments}" field="cmdLineArgs">
-        <f:textarea name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}" />
+        <f:textarea name="msBuildBuilder.cmdLineArgs" value="${instance.cmdLineArgs}"/>
     </f:entry>
     <f:entry title="${%Pass build variables as properties}" field="buildVariablesAsProperties">
         <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
-                        checked="${instance.buildVariablesAsProperties}" default="false" />
+                    checked="${instance.buildVariablesAsProperties}" default="false"/>
     </f:entry>
     <f:advanced>
         <f:entry title="${%Continue Job on build Failure}" field="continueOnBuildFailure">
             <f:checkbox name="msBuildBuilder.continueOnBuildFailure" value="${instance.continueOnBuildFailure}"
-                checked="${instance.continueOnBuildFailure}" default="false" />
+                        checked="${instance.continueOnBuildFailure}" default="false"/>
         </f:entry>
         <f:entry title="${%If warnings set the build to Unstable}" field="unstableIfWarnings">
             <f:checkbox name="msBuildBuilder.unstableIfWarnings" value="${instance.unstableIfWarnings}"
-                checked="${instance.unstableIfWarnings}" default="false" />
+                        checked="${instance.unstableIfWarnings}" default="false"/>
         </f:entry>
     </f:advanced>
 </j:jelly>
