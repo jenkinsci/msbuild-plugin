@@ -10,6 +10,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author kyle.sweeney@valtech.com
@@ -131,12 +132,11 @@ public class MsBuildBuilder extends Builder {
             args.add(tokenizeArgs(normalizedArgs));
 
         //Build /P:key1=value1;key2=value2 ...
-        Map<String, String> variables = build.getBuildVariables();
-
-        if (buildVariablesAsProperties && variables.size() != 0) {
+        Map<String, String> propertiesVariables = getPropertiesVariables(build);
+        if (buildVariablesAsProperties && propertiesVariables.size() != 0) {
             StringBuffer parameters = new StringBuffer();
             parameters.append("/p:");
-            for (Map.Entry<String, String> entry : variables.entrySet()) {
+            for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
                 parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
             }
             parameters.delete(parameters.length() - 1, parameters.length());
@@ -187,6 +187,24 @@ public class MsBuildBuilder extends Builder {
             return false;
         }
     }
+
+
+    private Map<String, String> getPropertiesVariables(AbstractBuild build) {
+
+        Map<String, String> buildVariables = build.getBuildVariables();
+
+        final Set<String> sensitiveBuildVariables = build.getSensitiveBuildVariables();
+        if (sensitiveBuildVariables == null || sensitiveBuildVariables.size() == 0) {
+            return buildVariables;
+        }
+
+        for (String sensitiveBuildVariable : sensitiveBuildVariables) {
+            buildVariables.remove(sensitiveBuildVariable);
+        }
+
+        return buildVariables;
+    }
+
 
     @Override
     public Descriptor<Builder> getDescriptor() {
