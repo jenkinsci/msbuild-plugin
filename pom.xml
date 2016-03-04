@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.625</version>
+        <version>2.3</version>
     </parent>
 
     <artifactId>msbuild</artifactId>
@@ -19,6 +19,11 @@
             <comments>All source code is under the MIT license.</comments>
         </license>
     </licenses>
+    
+    <properties>
+      <jenkins.version>1.625</jenkins.version>
+      <java.level>6</java.level>
+    </properties>
 
     <developers>
         <developer>

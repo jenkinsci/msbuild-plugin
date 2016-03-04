@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
     This plugin makes it possible to build a Visual Studio project (.proj) and solution files (.sln).
 </div>
