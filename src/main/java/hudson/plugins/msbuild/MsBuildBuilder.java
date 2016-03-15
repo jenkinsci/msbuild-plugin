@@ -160,7 +160,7 @@ public class MsBuildBuilder extends Builder {
             StringBuffer parameters = new StringBuffer();
             parameters.append("/p:");
             for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
-                parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+                parameters.append(entry.getKey()).append("=").append(entry.getValue().replace(" ", "%20")).append(";");
             }
             parameters.delete(parameters.length() - 1, parameters.length());
             args.add(parameters.toString());
