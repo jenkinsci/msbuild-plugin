@@ -125,7 +125,7 @@ public class MsBuildBuilder extends Builder {
             EnvVars env = build.getEnvironment(listener);
             ai = ai.forNode(Computer.currentComputer().getNode(), listener);
             ai = ai.forEnvironment(env);
-            String pathToMsBuild = ai.getHome();
+            String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
             FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
 
             try {
@@ -195,8 +195,9 @@ public class MsBuildBuilder extends Builder {
             listener.getLogger().println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
             // Parser to find the number of Warnings/Errors
             MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
+            MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), build.getCharset());
             // Launch the msbuild.exe
-            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).pwd(pwd).join();
+            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).stdout(annotator).pwd(pwd).join();
             // Check the number of warnings
             if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
                 listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
@@ -228,6 +229,27 @@ public class MsBuildBuilder extends Builder {
         return buildVariables;
     }
 
+    /**
+     * Get the full path of the tool to run.
+     * If given path is a directory, this will append the executable name.
+     */
+    static String getToolFullPath(Launcher launcher, String pathToTool, String execName) throws IOException, InterruptedException
+    {
+        String fullPathToMsBuild = pathToTool;
+        
+        FilePath exec = new FilePath(launcher.getChannel(), fullPathToMsBuild);
+        if (exec.isDirectory())
+        {
+            if (!fullPathToMsBuild.endsWith("\\"))
+            {
+                fullPathToMsBuild = fullPathToMsBuild + "\\";
+            }
+
+            fullPathToMsBuild = fullPathToMsBuild + execName;
+        }
+        
+        return fullPathToMsBuild;
+    }
 
     @Override
     public Descriptor<Builder> getDescriptor() {
