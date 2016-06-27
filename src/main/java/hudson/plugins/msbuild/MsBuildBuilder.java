@@ -125,7 +125,7 @@ public class MsBuildBuilder extends Builder {
             EnvVars env = build.getEnvironment(listener);
             ai = ai.forNode(Computer.currentComputer().getNode(), listener);
             ai = ai.forEnvironment(env);
-            String pathToMsBuild = ai.getHome();
+            String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
             FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
 
             try {
@@ -228,6 +228,27 @@ public class MsBuildBuilder extends Builder {
         return buildVariables;
     }
 
+    /**
+     * Get the full path of the tool to run.
+     * If given path is a directory, this will append the executable name.
+     */
+    static String getToolFullPath(Launcher launcher, String pathToTool, String execName) throws IOException, InterruptedException
+    {
+        String fullPathToMsBuild = pathToTool;
+        
+        FilePath exec = new FilePath(launcher.getChannel(), fullPathToMsBuild);
+        if (exec.isDirectory())
+        {
+            if (!fullPathToMsBuild.endsWith("\\"))
+            {
+                fullPathToMsBuild = fullPathToMsBuild + "\\";
+            }
+
+            fullPathToMsBuild = fullPathToMsBuild + execName;
+        }
+        
+        return fullPathToMsBuild;
+    }
 
     @Override
     public Descriptor<Builder> getDescriptor() {
