@@ -195,8 +195,9 @@ public class MsBuildBuilder extends Builder {
             listener.getLogger().println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
             // Parser to find the number of Warnings/Errors
             MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
+            MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), build.getCharset());
             // Launch the msbuild.exe
-            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).pwd(pwd).join();
+            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).stdout(annotator).pwd(pwd).join();
             // Check the number of warnings
             if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
                 listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
