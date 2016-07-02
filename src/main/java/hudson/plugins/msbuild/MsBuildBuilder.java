@@ -32,6 +32,7 @@ import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
@@ -123,26 +124,29 @@ public class MsBuildBuilder extends Builder {
             args.add(execName);
         } else {
             EnvVars env = build.getEnvironment(listener);
-            ai = ai.forNode(Computer.currentComputer().getNode(), listener);
-            ai = ai.forEnvironment(env);
-            String pathToMsBuild = ai.getHome();
-            FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
-
-            try {
-                if (!exec.exists()) {
-                    listener.fatalError(pathToMsBuild + " doesn't exist");
+            Node node = Computer.currentComputer().getNode();
+            if (node != null) {
+                ai = ai.forNode(node, listener);
+                ai = ai.forEnvironment(env);
+                String pathToMsBuild = ai.getHome();
+                FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
+    
+                try {
+                    if (!exec.exists()) {
+                        listener.fatalError(pathToMsBuild + " doesn't exist");
+                        return false;
+                    }
+                } catch (IOException e) {
+                    listener.fatalError("Failed checking for existence of " + pathToMsBuild);
                     return false;
                 }
-            } catch (IOException e) {
-                listener.fatalError("Failed checking for existence of " + pathToMsBuild);
-                return false;
-            }
-
-            listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
-            args.add(pathToMsBuild);
-
-            if (ai.getDefaultArgs() != null) {
-                args.add(tokenizeArgs(ai.getDefaultArgs()));
+    
+                listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
+                args.add(pathToMsBuild);
+    
+                if (ai.getDefaultArgs() != null) {
+                    args.add(tokenizeArgs(ai.getDefaultArgs()));
+                }
             }
         }
 
@@ -248,11 +252,7 @@ public class MsBuildBuilder extends Builder {
 
         final String[] tokenize = Util.tokenize(args);
 
-        if (tokenize == null) {
-            return null;
-        }
-
-        if (args != null && args.endsWith("\\")) {
+        if (args.endsWith("\\")) {
             tokenize[tokenize.length - 1] = tokenize[tokenize.length - 1] + "\\";
         }
 
@@ -279,7 +279,7 @@ public class MsBuildBuilder extends Builder {
         }
 
         public MsBuildInstallation[] getInstallations() {
-            return installations;
+            return Arrays.copyOf(installations, installations.length);
         }
 
         public void setInstallations(MsBuildInstallation... antInstallations) {

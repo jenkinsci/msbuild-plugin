@@ -34,11 +34,11 @@ import org.apache.commons.io.FilenameUtils;
 /**
  * An extension that avoids mspdbsrv.exe being killed by Jenkins.
  * 
- * Requires a Jenkins version >= 1.619. Will simply be ignored for older versions.
+ * Requires a Jenkins version &gt;= 1.619. Will simply be ignored for older versions.
  * 
- * @see JENKINS-9104
+ * See JENKINS-9104
  * 
- * @author Daniel Weber <daniel.weber.dev@gmail.com>
+ * @author Daniel Weber &lt;daniel.weber.dev@gmail.com&gt;
  */
 @Extension(optional = true)
 public class MsBuildKillingVeto extends ProcessKillingVeto {
