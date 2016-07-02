@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  */
 public class MSBuildWarningNote extends ConsoleNote {
     /** Pattern to identify doxygen warning message */
-    public static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+,\\d+\\):\\swarning\\s:\\s(.*)");
+    public final static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+,\\d+\\):\\swarning\\s((MSB|CS)\\d+){0,1}:\\s(.*)");
     
     public MSBuildWarningNote() {
     }

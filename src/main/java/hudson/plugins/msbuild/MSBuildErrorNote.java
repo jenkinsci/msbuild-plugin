@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  */
 public class MSBuildErrorNote extends ConsoleNote {
     /** Pattern to identify doxygen error message */
-    public static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(CS|MSB)\\d+(.*)");
+    public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(CS|MSB)\\d+(.*)");
     
     public MSBuildErrorNote() {
     }
