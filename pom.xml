@@ -36,6 +36,11 @@
             <name>Kyle Sweeney</name>
             <email>kyle.sweeney@valtech.com</email>
         </developer>
+        <developer>
+            <id>marshall777</id>
+            <name>Lionel Cabasson</name>
+            <email>marshall777@gmail.com</email>
+        </developer>
     </developers>
 
     <scm>
