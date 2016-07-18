@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
  * Annotation for MSBuild and CSC error messages
  */
 public class MSBuildErrorNote extends ConsoleNote {
-    /** Pattern to identify doxygen error message */
-    public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(CS|MSB)\\d+(.*)");
+    /** Pattern to identify error messages */
+    public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
     
     public MSBuildErrorNote() {
     }
