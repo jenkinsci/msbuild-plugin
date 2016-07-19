@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
  * Annotation for MSBuild warning messages
  */
 public class MSBuildWarningNote extends ConsoleNote {
-    /** Pattern to identify doxygen warning message */
-    public final static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+,\\d+\\):\\swarning\\s((MSB|CS)\\d+){0,1}:\\s(.*)");
+    /** Pattern to identify warning messages */
+    public final static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+(,\\d+){0,1}\\):\\s[Ww]arning\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
     
     public MSBuildWarningNote() {
     }
