@@ -5,6 +5,8 @@ import hudson.MarkupText;
 import hudson.console.ConsoleAnnotationDescriptor;
 import hudson.console.ConsoleAnnotator;
 import hudson.console.ConsoleNote;
+import org.jenkinsci.Symbol;
+
 import java.util.regex.Pattern;
 
 /**
@@ -23,7 +25,7 @@ public class MSBuildWarningNote extends ConsoleNote {
         return null;
     }
 
-    @Extension
+    @Extension @Symbol("msbuildWarning")
     public static final class DescriptorImpl extends ConsoleAnnotationDescriptor {
 
         public String getDisplayName() {

@@ -33,6 +33,7 @@ import hudson.slaves.NodeSpecific;
 import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
 import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -62,7 +63,7 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         return this.defaultArgs;
     }
 
-    @Extension
+    @Extension @Symbol("msbuild")
     public static class DescriptorImpl extends ToolDescriptor<MsBuildInstallation> {
 
         public String getDisplayName() {

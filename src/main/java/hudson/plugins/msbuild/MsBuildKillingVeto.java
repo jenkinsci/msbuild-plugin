@@ -30,6 +30,7 @@ import hudson.util.ProcessTreeRemoting.IOSProcess;
 import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
+import org.jenkinsci.Symbol;
 
 /**
  * An extension that avoids mspdbsrv.exe being killed by Jenkins.
@@ -40,7 +41,7 @@ import org.apache.commons.io.FilenameUtils;
  * 
  * @author Daniel Weber &lt;daniel.weber.dev@gmail.com&gt;
  */
-@Extension(optional = true)
+@Extension(optional = true) @Symbol("msbuildKillingVeto")
 public class MsBuildKillingVeto extends ProcessKillingVeto {
     private static final VetoCause VETO_CAUSE = new VetoCause("MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details");
 
