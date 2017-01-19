@@ -28,6 +28,7 @@ public class MSBuildWarningNote extends ConsoleNote {
     @Extension @Symbol("msbuildWarning")
     public static final class DescriptorImpl extends ConsoleAnnotationDescriptor {
 
+        @Override
         public String getDisplayName() {
             return Messages.MsBuildBuilder_WarningNoteDescription();
         }

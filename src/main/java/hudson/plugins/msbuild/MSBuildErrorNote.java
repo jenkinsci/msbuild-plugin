@@ -28,6 +28,7 @@ public class MSBuildErrorNote extends ConsoleNote {
     @Extension @Symbol("msbuildError")
     public static final class DescriptorImpl extends ConsoleAnnotationDescriptor {
 
+        @Override
         public String getDisplayName() {
             return Messages.MsBuildBuilder_ErrorNoteDescription();
         }
