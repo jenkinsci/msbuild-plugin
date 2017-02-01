@@ -161,7 +161,7 @@ public class MsBuildBuilder extends Builder {
 
         //Build /P:key1=value1;key2=value2 ...
         Map<String, String> propertiesVariables = getPropertiesVariables(build);
-        if (buildVariablesAsProperties && propertiesVariables.size() != 0) {
+        if (buildVariablesAsProperties && !propertiesVariables.isEmpty()) {
             StringBuffer parameters = new StringBuffer();
             parameters.append("/p:");
             for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
@@ -178,7 +178,7 @@ public class MsBuildBuilder extends Builder {
             normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
             normalizedFile = Util.replaceMacro(normalizedFile, env);
             normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
-            if (normalizedFile.length() > 0) {
+            if (!normalizedFile.isEmpty()) {
                 args.add(normalizedFile);
             }
         }
@@ -223,7 +223,7 @@ public class MsBuildBuilder extends Builder {
         Map<String, String> buildVariables = build.getBuildVariables();
 
         final Set<String> sensitiveBuildVariables = build.getSensitiveBuildVariables();
-        if (sensitiveBuildVariables == null || sensitiveBuildVariables.size() == 0) {
+        if (sensitiveBuildVariables == null || sensitiveBuildVariables.isEmpty()) {
             return buildVariables;
         }
 
@@ -258,7 +258,7 @@ public class MsBuildBuilder extends Builder {
 
     @Override
     public Descriptor<Builder> getDescriptor() {
-        return (DescriptorImpl) super.getDescriptor();
+        return super.getDescriptor();
     }
 
     /**
@@ -292,6 +292,7 @@ public class MsBuildBuilder extends Builder {
             load();
         }
 
+        @Override
         public String getDisplayName() {
             return Messages.MsBuildBuilder_DisplayName();
         }

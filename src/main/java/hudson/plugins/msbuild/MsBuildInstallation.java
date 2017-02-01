@@ -43,7 +43,7 @@ import java.io.IOException;
  */
 public final class MsBuildInstallation extends ToolInstallation implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
 
-    private String defaultArgs;
+    private final String defaultArgs;
 
     @DataBoundConstructor
     public MsBuildInstallation(String name, String home, String defaultArgs) {
@@ -51,10 +51,12 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         this.defaultArgs = Util.fixEmpty(defaultArgs);
     }
 
+    @Override
     public MsBuildInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
         return new MsBuildInstallation(getName(), translateFor(node, log), getDefaultArgs());
     }
 
+    @Override
     public MsBuildInstallation forEnvironment(EnvVars environment) {
         return new MsBuildInstallation(getName(), environment.expand(getHome()), getDefaultArgs());
     }
@@ -66,6 +68,7 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
     @Extension @Symbol("msbuild")
     public static class DescriptorImpl extends ToolDescriptor<MsBuildInstallation> {
 
+        @Override
         public String getDisplayName() {
             return "MSBuild";
         }

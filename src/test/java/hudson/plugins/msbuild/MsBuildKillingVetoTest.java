@@ -78,6 +78,7 @@ public class MsBuildKillingVetoTest {
 
     private IOSProcess mockProcess(final String... cmdLine) {
         return new IOSProcess() {
+            @Override
             public void killRecursively() throws InterruptedException {
             }
 
