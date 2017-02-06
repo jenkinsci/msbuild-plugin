@@ -323,17 +323,23 @@ public class MsBuildBuilder extends Builder {
 
     private static int getCodePageIdentifier(Charset charset) {
         final String s_charset = charset.name();
-        if(s_charset.equalsIgnoreCase("utf-8"))            // Unicode
+        if(s_charset.equalsIgnoreCase("utf-8"))             // Unicode
             return 65001;
+        else if(s_charset.equalsIgnoreCase("ibm437"))       // US
+            return 437;
+        else if(s_charset.equalsIgnoreCase("ibm850"))       // OEM Multilingual Latin 1
+            return 850;
+        else if(s_charset.equalsIgnoreCase("ibm852"))       // OEM Latin2
+            return 852;
         else if(s_charset.equalsIgnoreCase("shift_jis") || s_charset.equalsIgnoreCase("windows-31j"))//Japanese
             return 932;
-        else if(s_charset.equalsIgnoreCase("us-ascii"))    // Japanese
+        else if(s_charset.equalsIgnoreCase("us-ascii"))     // US-ASCII
             return 20127;
-        else if(s_charset.equalsIgnoreCase("euc-jp"))      // Japanese
+        else if(s_charset.equalsIgnoreCase("euc-jp"))       // Japanese
             return 20932;
-        else if(s_charset.equalsIgnoreCase("iso-8859-1"))  // Latin 1
+        else if(s_charset.equalsIgnoreCase("iso-8859-1"))   // Latin 1
             return 28591;
-        else if(s_charset.equalsIgnoreCase("iso-8859-2"))  // Latin 2
+        else if(s_charset.equalsIgnoreCase("iso-8859-2"))   // Latin 2
             return 28592;
         else
             return 0;
