@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.nio.charset.Charset;
 
 /**
  * @author kyle.sweeney@valtech.com
@@ -192,7 +193,11 @@ public class MsBuildBuilder extends Builder {
         }
 
         if (!launcher.isUnix()) {
-            args.prepend("cmd.exe", "/C", "\"");
+            final int cpi = getCodePageIdentifier(build.getCharset());
+            if(cpi != 0)
+                args.prepend("cmd.exe", "/C", "\"", "chcp", String.valueOf(cpi), "&&");
+            else
+                args.prepend("cmd.exe", "/C", "\"");
             args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
         }
 
@@ -314,5 +319,29 @@ public class MsBuildBuilder extends Builder {
         public MsBuildInstallation.DescriptorImpl getToolDescriptor() {
             return ToolInstallation.all().get(MsBuildInstallation.DescriptorImpl.class);
         }
+    }
+
+    private static int getCodePageIdentifier(Charset charset) {
+        final String s_charset = charset.name();
+        if(s_charset.equalsIgnoreCase("utf-8"))             // Unicode
+            return 65001;
+        else if(s_charset.equalsIgnoreCase("ibm437"))       // US
+            return 437;
+        else if(s_charset.equalsIgnoreCase("ibm850"))       // OEM Multilingual Latin 1
+            return 850;
+        else if(s_charset.equalsIgnoreCase("ibm852"))       // OEM Latin2
+            return 852;
+        else if(s_charset.equalsIgnoreCase("shift_jis") || s_charset.equalsIgnoreCase("windows-31j"))//Japanese
+            return 932;
+        else if(s_charset.equalsIgnoreCase("us-ascii"))     // US-ASCII
+            return 20127;
+        else if(s_charset.equalsIgnoreCase("euc-jp"))       // Japanese
+            return 20932;
+        else if(s_charset.equalsIgnoreCase("iso-8859-1"))   // Latin 1
+            return 28591;
+        else if(s_charset.equalsIgnoreCase("iso-8859-2"))   // Latin 2
+            return 28592;
+        else
+            return 0;
     }
 }
