@@ -12,6 +12,7 @@
     <version>1.28-SNAPSHOT</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
+    <description>Allows using MSBuild to build .NET projects</description>
 
     <licenses>
         <license>
