@@ -259,7 +259,7 @@ public class MsBuildBuilder extends Builder {
      */
     static String getToolFullPath(Launcher launcher, String pathToTool, String execName) throws IOException, InterruptedException
     {
-        String fullPathToMsBuild = pathToTool;
+        String fullPathToMsBuild = (pathToTool != null ? pathToTool : "");
         
         FilePath exec = new FilePath(launcher.getChannel(), fullPathToMsBuild);
         if (exec.isDirectory())

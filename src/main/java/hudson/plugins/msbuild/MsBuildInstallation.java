@@ -85,11 +85,11 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         
         private MsBuildBuilder.DescriptorImpl getDescriptor() {
             Jenkins jenkins = Jenkins.getInstance();
-            if (jenkins != null && jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class) != null) {
+            if (jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class) != null) {
                 return jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class);
             } else {
                 // To stick with current behavior and meet findbugs requirements
-                throw new NullPointerException(jenkins == null ? "Jenkins instance is null" : "MsBuildBuilder.DescriptorImpl is null");
+                throw new NullPointerException("MsBuildBuilder.DescriptorImpl is null");
             }
         }
 
