@@ -52,6 +52,7 @@ public class MsBuildBuilder extends Builder {
     private transient boolean continueOnBuilFailure;
     private final boolean continueOnBuildFailure;
     private final boolean unstableIfWarnings;
+    private final boolean doNotUseChcpCommand;
 
     /**
      * When this builder is created in the project configuration step,
@@ -63,16 +64,18 @@ public class MsBuildBuilder extends Builder {
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
      * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
      * @param unstableIfWarnings         If true, job will be unstable if there are warnings
+     * @param doNotUseChcpCommand        If true, job will not use chcp command before running msbuild
      */
     @DataBoundConstructor
     @SuppressWarnings("unused")
-    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
+    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings, boolean doNotUseChcpCommand) {
         this.msBuildName = msBuildName;
         this.msBuildFile = msBuildFile;
         this.cmdLineArgs = cmdLineArgs;
         this.buildVariablesAsProperties = buildVariablesAsProperties;
         this.continueOnBuildFailure = continueOnBuildFailure;
         this.unstableIfWarnings = unstableIfWarnings;
+        this.doNotUseChcpCommand = doNotUseChcpCommand;
     }
 
     @SuppressWarnings("unused")
@@ -104,7 +107,12 @@ public class MsBuildBuilder extends Builder {
     public boolean getUnstableIfWarnings() {
         return unstableIfWarnings;
     }
-
+   
+    @SuppressWarnings("unused")
+    public boolean getDoNotUseChcpCommand() {
+        return doNotUseChcpCommand;
+    }
+    
     public MsBuildInstallation getMsBuild() {
         DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
         for (MsBuildInstallation i : descriptor.getInstallations()) {
@@ -193,12 +201,18 @@ public class MsBuildBuilder extends Builder {
         }
 
         if (!launcher.isUnix()) {
-            final int cpi = getCodePageIdentifier(build.getCharset());
-            if(cpi != 0)
-                args.prepend("cmd.exe", "/C", "\"", "chcp", String.valueOf(cpi), "&&");
-            else
-                args.prepend("cmd.exe", "/C", "\"");
+            if (!doNotUseChcpCommand) {
+                final int cpi = getCodePageIdentifier(build.getCharset());
+                if(cpi != 0) {
+                    args.prepend("chcp", String.valueOf(cpi), "&&");
+                }
+            }
+            
+            args.prepend("cmd.exe", "/C", "\"");
             args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
+        }
+        else {
+            listener.fatalError("Unable to use this plugin on this kind of operation system");
         }
 
         try {
