@@ -204,7 +204,7 @@ public class MsBuildBuilder extends Builder {
             if (!doNotUseChcpCommand) {
                 final int cpi = getCodePageIdentifier(build.getCharset());
                 if(cpi != 0) {
-                    args.prepend("chcp", String.valueOf(cpi), "&&");
+                    args.prepend("chcp", String.valueOf(cpi), "&");
                 }
             }
             
