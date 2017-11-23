@@ -64,6 +64,24 @@ public class MsBuildBuilder extends Builder {
      * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
      * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
      * @param unstableIfWarnings         If true, job will be unstable if there are warnings
+     */
+    @Deprecated
+    @SuppressWarnings("unused")
+    public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
+        // By default, doNotUseChcpCommand=false
+        this(msBuildName, msBuildFile, cmdLineArgs, buildVariablesAsProperties, continueOnBuildFailure, unstableIfWarnings, false);
+    }
+
+    /**
+     * When this builder is created in the project configuration step,
+     * the builder object will be created from the strings below.
+     *
+     * @param msBuildName                The Visual Studio logical name
+     * @param msBuildFile                The name/location of the MSBuild file
+     * @param cmdLineArgs                Whitespace separated list of command line arguments
+     * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
+     * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
+     * @param unstableIfWarnings         If true, job will be unstable if there are warnings
      * @param doNotUseChcpCommand        If true, job will not use chcp command before running msbuild
      */
     @DataBoundConstructor
