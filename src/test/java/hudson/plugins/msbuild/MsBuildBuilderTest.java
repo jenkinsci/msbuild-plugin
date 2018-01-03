@@ -51,8 +51,8 @@ public class MsBuildBuilderTest {
     @LocalData
     public void configRoundtrip() {
         try {
-            FreeStyleProject p = (FreeStyleProject)r.jenkins.getAllItems().get(0);
-            r.configRoundtrip(p);
+            FreeStyleProject project = (FreeStyleProject)r.jenkins.getAllItems().get(0);
+            r.configRoundtrip(project);
         } catch (Exception e) {
             throw new AssertionError("Not valid configuration for MsBuild");
         }
