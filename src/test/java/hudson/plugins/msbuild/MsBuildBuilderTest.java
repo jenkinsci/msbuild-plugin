@@ -1,6 +1,10 @@
 package hudson.plugins.msbuild;
 
+import hudson.model.FreeStyleProject;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -9,6 +13,9 @@ import static org.junit.Assert.assertNotNull;
  * @author Jonathan Zimmerman
  */
 public class MsBuildBuilderTest {
+
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
 
     @Test
     public void shouldStripQuotedArguments() {
@@ -38,6 +45,17 @@ public class MsBuildBuilderTest {
         String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(oneArgumentsWithEndBackslash);
         assertEquals(1, tokenizedArgs.length);
         assertEquals(oneArgumentsWithEndBackslash, tokenizedArgs[0]);
+    }
+
+    @Test
+    @LocalData
+    public void configRoundtrip() {
+        try {
+            FreeStyleProject project = (FreeStyleProject)r.jenkins.getAllItems().get(0);
+            r.configRoundtrip(project);
+        } catch (Exception e) {
+            throw new AssertionError("Not valid configuration for MsBuild");
+        }
     }
 
 }
