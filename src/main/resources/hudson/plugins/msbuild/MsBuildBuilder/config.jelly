@@ -41,6 +41,10 @@ THE SOFTWARE.
         <f:checkbox name="msBuildBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
                     checked="${instance.buildVariablesAsProperties}" default="false"/>
     </f:entry>
+    <f:entry title="${%Do not use chcp command}" field="doNotUseChcpCommand">
+        <f:checkbox name="msBuildBuilder.doNotUseChcpCommand" value="${instance.doNotUseChcpCommand}"
+                    checked="${instance.doNotUseChcpCommand}" default="false"/>
+    </f:entry>
     <f:advanced>
         <f:entry title="${%Continue Job on build Failure}" field="continueOnBuildFailure">
             <f:checkbox name="msBuildBuilder.continueOnBuildFailure" value="${instance.continueOnBuildFailure}"
