@@ -1,1 +1,1 @@
-buildPlugin(platforms: ['windows'])
+buildPlugin(configurations: buildPlugin.recommendedConfigurations())
