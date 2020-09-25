@@ -29,44 +29,49 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
-import org.jenkinsci.Symbol;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
-import java.nio.charset.Charset;
+import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildStep;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * @author kyle.sweeney@valtech.com
  */
-public class MsBuildBuilder extends Builder {
+public class MsBuildBuilder extends Builder implements SimpleBuildStep {
+
     /**
      * GUI fields
      */
-    private final String msBuildName;
-    private final String msBuildFile;
-    private final String cmdLineArgs;
-    private final boolean buildVariablesAsProperties;
-    private transient boolean continueOnBuilFailure;
-    private final boolean continueOnBuildFailure;
-    private final boolean unstableIfWarnings;
-    private final boolean doNotUseChcpCommand;
+    private String msBuildName;
+    private String msBuildFile;
+    private String cmdLineArgs;
+    private boolean buildVariablesAsProperties;
+    private boolean continueOnBuildFailure;
+    private boolean unstableIfWarnings;
+    private boolean doNotUseChcpCommand;
 
     /**
-     * When this builder is created in the project configuration step,
-     * the builder object will be created from the strings below.
+     * When this builder is created in the project configuration step, the
+     * builder object will be created from the strings below.
      *
-     * @param msBuildName                The Visual Studio logical name
-     * @param msBuildFile                The name/location of the MSBuild file
-     * @param cmdLineArgs                Whitespace separated list of command line arguments
-     * @param buildVariablesAsProperties If true, pass build variables as properties to MSBuild
-     * @param continueOnBuildFailure     If true, job will continue dispite of MSBuild build failure
-     * @param unstableIfWarnings         If true, job will be unstable if there are warnings
+     * @param msBuildName The Visual Studio logical name
+     * @param msBuildFile The name/location of the MSBuild file
+     * @param cmdLineArgs Whitespace separated list of command line arguments
+     * @param buildVariablesAsProperties If true, pass build variables as
+     * properties to MSBuild
+     * @param continueOnBuildFailure If true, job will continue dispite of
+     * MSBuild build failure
+     * @param unstableIfWarnings If true, job will be unstable if there are
+     * warnings
      */
     @Deprecated
-    @SuppressWarnings("unused")
+
     public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
         // By default, doNotUseChcpCommand=false
         this(msBuildName, msBuildFile, cmdLineArgs, buildVariablesAsProperties, continueOnBuildFailure, unstableIfWarnings, false);
@@ -84,65 +89,99 @@ public class MsBuildBuilder extends Builder {
      * @param unstableIfWarnings         If true, job will be unstable if there are warnings
      * @param doNotUseChcpCommand        If true, job will not use chcp command before running msbuild
      */
-    @DataBoundConstructor
-    @SuppressWarnings("unused")
+    @Deprecated
+
     public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs, boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings, boolean doNotUseChcpCommand) {
         this.msBuildName = msBuildName;
-        this.msBuildFile = msBuildFile;
-        this.cmdLineArgs = cmdLineArgs;
+        this.setMsBuildFile(msBuildFile);
+        this.setCmdLineArgs(cmdLineArgs);
         this.buildVariablesAsProperties = buildVariablesAsProperties;
         this.continueOnBuildFailure = continueOnBuildFailure;
         this.unstableIfWarnings = unstableIfWarnings;
         this.doNotUseChcpCommand = doNotUseChcpCommand;
     }
 
-    @SuppressWarnings("unused")
+    @DataBoundConstructor
+    public MsBuildBuilder() {
+        this("", "", "", false, false, false, false);
+    }
+
     public String getMsBuildFile() {
         return msBuildFile;
     }
+    
+    @DataBoundSetter
+    public final void setMsBuildFile(String buildFile) {
+        this.msBuildFile = buildFile.trim();
+    }
 
-    @SuppressWarnings("unused")
     public String getMsBuildName() {
         return msBuildName;
     }
+    
+    @DataBoundSetter
+    public final void setMsBuildName(String buildName) {
+        this.msBuildName = buildName;
+    }
 
-    @SuppressWarnings("unused")
     public String getCmdLineArgs() {
         return cmdLineArgs;
     }
 
-    @SuppressWarnings("unused")
+    @DataBoundSetter
+    public final void setCmdLineArgs(String args) {
+        this.cmdLineArgs = args.trim();
+    }
+
     public boolean getBuildVariablesAsProperties() {
         return buildVariablesAsProperties;
     }
+    
+    @DataBoundSetter
+    public final void setBuildVariablesAsProperties(boolean buildVarsProp) {
+        this.buildVariablesAsProperties = buildVarsProp;
+    }
 
-    @SuppressWarnings("unused")
     public boolean getContinueOnBuildFailure() {
         return continueOnBuildFailure;
     }
 
-    @SuppressWarnings("unused")
+    @DataBoundSetter
+    public void setContinueOnBuildFailure(boolean continueOnFailure) {
+        this.continueOnBuildFailure = continueOnFailure;
+    }
+
     public boolean getUnstableIfWarnings() {
         return unstableIfWarnings;
     }
-   
-    @SuppressWarnings("unused")
+
+    @DataBoundSetter
+    public void setUnstableIfWarnings(boolean unstableWarnings) {
+        this.unstableIfWarnings = unstableWarnings;
+    }
+
     public boolean getDoNotUseChcpCommand() {
         return doNotUseChcpCommand;
     }
-    
+
+    @DataBoundSetter
+    public void setDoNotUseChcpCommand(boolean noChcp) {
+        this.doNotUseChcpCommand = noChcp;
+    }
+
     public MsBuildInstallation getMsBuild() {
         DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
         for (MsBuildInstallation i : descriptor.getInstallations()) {
-            if (msBuildName != null && i.getName().equals(msBuildName))
+            if (msBuildName != null && i.getName().equals(msBuildName)) {
                 return i;
+            }
         }
 
         return null;
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+    public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         ArgumentListBuilder args = new ArgumentListBuilder();
         String execName = "msbuild.exe";
         MsBuildInstallation ai = getMsBuild();
@@ -151,109 +190,138 @@ public class MsBuildBuilder extends Builder {
             listener.getLogger().println("Path To MSBuild.exe: " + execName);
             args.add(execName);
         } else {
-            EnvVars env = build.getEnvironment(listener);
-            Node node = Computer.currentComputer().getNode();
+            EnvVars env = new EnvVars();
+            if (run instanceof AbstractBuild) {
+                env = run.getEnvironment(listener);
+            }
+            
+            Node node = MsBuildBuilder.workspaceToNode(workspace);
+            
             if (node != null) {
                 ai = ai.forNode(node, listener);
                 ai = ai.forEnvironment(env);
                 String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
                 FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
-    
+
                 try {
                     if (!exec.exists()) {
-                        listener.fatalError(pathToMsBuild + " doesn't exist");
-                        return false;
+                        throw new AbortException(pathToMsBuild + " doesn't exist");
                     }
                 } catch (IOException e) {
-                    listener.fatalError("Failed checking for existence of " + pathToMsBuild);
-                    return false;
+                    throw new AbortException("Failed checking for existence of " + pathToMsBuild);
                 }
-    
+
                 listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
                 args.add(pathToMsBuild);
-    
+
                 if (ai.getDefaultArgs() != null) {
                     args.add(tokenizeArgs(ai.getDefaultArgs()));
                 }
             }
         }
 
-        EnvVars env = build.getEnvironment(listener);
-        String normalizedArgs = cmdLineArgs.replaceAll("[\t\r\n]+", " ");
-        normalizedArgs = Util.replaceMacro(normalizedArgs, env);
-        normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
-
-        if (normalizedArgs.trim().length() > 0)
+        String normalizedArgs = normalizeAndReplaceVars(run, listener, cmdLineArgs, args);
+        if (normalizedArgs != null && normalizedArgs.trim().length() > 0) {
             args.add(tokenizeArgs(normalizedArgs));
+        }
 
         //Build /P:key1=value1;key2=value2 ...
-        Map<String, String> propertiesVariables = getPropertiesVariables(build);
-        if (buildVariablesAsProperties && !propertiesVariables.isEmpty()) {
-            StringBuffer parameters = new StringBuffer();
-            parameters.append("/p:");
-            for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
-                parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+        if (run instanceof AbstractBuild && buildVariablesAsProperties) {
+            AbstractBuild<?, ?> build = (AbstractBuild<?, ?>) run;
+            Map<String, String> propertiesVariables = getPropertiesVariables(build);
+            if (!propertiesVariables.isEmpty()) {
+                StringBuilder parameters = new StringBuilder();
+                parameters.append("/p:");
+                for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
+                    parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+                }
+                parameters.delete(parameters.length() - 1, parameters.length());
+                args.add(parameters.toString());
             }
-            parameters.delete(parameters.length() - 1, parameters.length());
-            args.add(parameters.toString());
         }
 
         //If a msbuild file is specified, then add it as an argument, otherwise
         //msbuild will search for any file that ends in .proj or .sln
         String normalizedFile = null;
         if (msBuildFile != null && msBuildFile.trim().length() != 0) {
-            normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
-            normalizedFile = Util.replaceMacro(normalizedFile, env);
-            normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
-            if (!normalizedFile.isEmpty()) {
+            normalizedFile = normalizeAndReplaceVars(run, listener, msBuildFile, args);
+            if (normalizedFile != null && normalizedFile.trim().length() > 0) {
                 args.add(normalizedFile);
             }
         }
-
-        FilePath pwd = build.getModuleRoot();
-        if (normalizedFile != null) {
-            FilePath msBuildFilePath = pwd.child(normalizedFile);
-            if (!msBuildFilePath.exists()) {
-                pwd = build.getWorkspace();
+        FilePath pwd;
+        if (run instanceof AbstractBuild){
+            AbstractBuild<?, ?> build = (AbstractBuild<?, ?>) run;
+            pwd = build.getModuleRoot();
+            if (normalizedFile != null) {
+                FilePath msBuildFilePath = pwd.child(normalizedFile);
+                if (!msBuildFilePath.exists()) {
+                    pwd = workspace;
+                }
             }
         }
+        else{
+            pwd = workspace;
+        }
+                
 
         if (!launcher.isUnix()) {
             if (!doNotUseChcpCommand) {
-                final int cpi = getCodePageIdentifier(build.getCharset());
-                if(cpi != 0) {
+                final int cpi = getCodePageIdentifier(run.getCharset());
+                if (cpi != 0) {
                     args.prepend("chcp", String.valueOf(cpi), "&");
                 }
             }
-            
+
             args.prepend("cmd.exe", "/C", "\"");
             args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
-        }
-        else {
+        } else {
             listener.fatalError("Unable to use this plugin on this kind of operation system");
         }
 
         try {
             listener.getLogger().println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
             // Parser to find the number of Warnings/Errors
-            MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
-            MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), build.getCharset());
+            MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), run.getCharset());
+            MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), run.getCharset());
             // Launch the msbuild.exe
+            EnvVars env = new EnvVars();
+            if (run instanceof AbstractBuild){
+                env = ((AbstractBuild<?, ?>) run).getEnvironment(listener);
+            }
+
             int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).stdout(annotator).pwd(pwd).join();
             // Check the number of warnings
             if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
                 listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
-                build.setResult(Result.UNSTABLE);
+                run.setResult(Result.UNSTABLE);
             }
             // Return the result of the compilation
-            return continueOnBuildFailure ? true : (r == 0);
+            if (r != 0) {
+                if (!continueOnBuildFailure) {
+                    run.setResult(Result.FAILURE);
+                    throw new AbortException("MSBuild returned " + r);
+                } else {
+                    listener.error("MSBuild returned " + r);
+                }
+            }
         } catch (IOException e) {
             Util.displayIOException(e, listener);
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
+            throw new AbortException();
         }
     }
 
+    private String normalizeAndReplaceVars(Run<?, ?> run, TaskListener listener, String stringToNormalize, ArgumentListBuilder args) throws InterruptedException, IOException {
+        String normalizedString = stringToNormalize.replaceAll("[\t\r\n]+", " ");
+        if (run instanceof AbstractBuild) {
+            EnvVars env = run.getEnvironment(listener);
+            AbstractBuild<?, ?> build = (AbstractBuild<?, ?>) run;
+            normalizedString = Util.replaceMacro(normalizedString, env);
+            normalizedString = Util.replaceMacro(normalizedString, build.getBuildVariables());
+        }
+        return normalizedString;
+    }
 
     private Map<String, String> getPropertiesVariables(AbstractBuild build) {
 
@@ -270,26 +338,42 @@ public class MsBuildBuilder extends Builder {
 
         return buildVariables;
     }
+    
+    /**
+     * @author ndeloof via git plugin
+     */
+    private static Node workspaceToNode(FilePath workspace) {
+        @SuppressWarnings("deprecation")
+        Jenkins j = Jenkins.getActiveInstance();
+        if (workspace != null && workspace.isRemote()) {
+            for (Computer c : j.getComputers()) {
+                if (c.getChannel() == workspace.getChannel()) {
+                    Node n = c.getNode();
+                    if (n != null) {
+                        return n;
+                    }
+                }
+            }
+        }
+        return j;
+    }
 
     /**
      * Get the full path of the tool to run.
      * If given path is a directory, this will append the executable name.
      */
-    static String getToolFullPath(Launcher launcher, String pathToTool, String execName) throws IOException, InterruptedException
-    {
+    static String getToolFullPath(Launcher launcher, String pathToTool, String execName) throws IOException, InterruptedException {
         String fullPathToMsBuild = (pathToTool != null ? pathToTool : "");
-        
+
         FilePath exec = new FilePath(launcher.getChannel(), fullPathToMsBuild);
-        if (exec.isDirectory())
-        {
-            if (!fullPathToMsBuild.endsWith("\\"))
-            {
+        if (exec.isDirectory()) {
+            if (!fullPathToMsBuild.endsWith("\\")) {
                 fullPathToMsBuild = fullPathToMsBuild + "\\";
             }
 
             fullPathToMsBuild = fullPathToMsBuild + execName;
         }
-        
+
         return fullPathToMsBuild;
     }
 
@@ -319,7 +403,8 @@ public class MsBuildBuilder extends Builder {
         return tokenize;
     }
 
-    @Extension @Symbol("msbuild")
+    @Extension
+    @Symbol("msbuild")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];

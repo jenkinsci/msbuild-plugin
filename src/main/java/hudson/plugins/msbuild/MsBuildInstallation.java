@@ -47,7 +47,7 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
 
     @DataBoundConstructor
     public MsBuildInstallation(String name, String home, String defaultArgs) {
-        super(name, home, null);
+        super(name.trim(), home, null);
         this.defaultArgs = Util.fixEmpty(defaultArgs);
     }
 
