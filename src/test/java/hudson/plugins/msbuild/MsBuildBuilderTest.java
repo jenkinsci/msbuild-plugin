@@ -54,7 +54,7 @@ public class MsBuildBuilderTest {
             FreeStyleProject project = (FreeStyleProject)r.jenkins.getAllItems().get(0);
             r.configRoundtrip(project);
         } catch (Exception e) {
-            throw new AssertionError("Not valid configuration for MsBuild");
+            throw new AssertionError("Not valid configuration for MsBuild", e);
         }
     }
 
