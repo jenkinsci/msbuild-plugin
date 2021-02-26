@@ -9,7 +9,7 @@
 
     <artifactId>msbuild</artifactId>
     <packaging>hpi</packaging>
-    <version>1.30</version>
+    <version>1.31-SNAPSHOT</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
     <description>Allows using MSBuild to build .NET projects</description>
@@ -52,7 +52,7 @@
     <scm>
         <connection>scm:git:git://github.com/jenkinsci/msbuild-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/msbuild-plugin.git</developerConnection>
-        <tag>msbuild-1.30</tag>
+        <tag>${scmTag}</tag>
     </scm>
 
     <dependencyManagement>
