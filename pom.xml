@@ -24,8 +24,8 @@
     </licenses>
     
     <properties>
-        <jenkins.version>2.222</jenkins.version>
-        <revision>1.30</revision>
+        <jenkins.version>2.332.4</jenkins.version>
+        <revision>2.222</revision>
         <changelist>-SNAPSHOT</changelist>
     </properties>
 
@@ -58,8 +58,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.222.x</artifactId>
-                <version>24</version>
+                <artifactId>bom-2.332.x</artifactId>
+                <version>1706.vc166d5f429f8</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
