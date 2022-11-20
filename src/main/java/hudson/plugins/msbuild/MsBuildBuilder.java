@@ -321,7 +321,7 @@ public class MsBuildBuilder extends Builder {
     }
 
     @Extension @Symbol("msbuild")
-    @SuppressFBWarnings(value = "VO_VOLATILE_REFERENCE_TO_ARRAY", justification = "")
+    @SuppressFBWarnings(value = "VO_VOLATILE_REFERENCE_TO_ARRAY", justification = "untriaged")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
