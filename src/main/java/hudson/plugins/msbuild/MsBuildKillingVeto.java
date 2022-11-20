@@ -52,7 +52,6 @@ public class MsBuildKillingVeto extends ProcessKillingVeto {
     * 
     */
     @Override
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification = "proc.getArguments() could be null or empty")
     public VetoCause vetoProcessKilling(IOSProcess proc) {
         if (proc == null)
             return null;
