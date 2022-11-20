@@ -58,7 +58,7 @@ public class MsBuildKillingVeto extends ProcessKillingVeto {
 
         List<String> cmdLine = proc.getArguments();
 
-        if (cmdLine == null || cmdLine.isEmpty())
+        if (cmdLine.isEmpty())
             return null;
 
         String command = cmdLine.get(0);
