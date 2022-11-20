@@ -23,6 +23,7 @@
  */
 package hudson.plugins.msbuild;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
@@ -31,6 +32,7 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -304,10 +306,12 @@ public class MsBuildBuilder extends Builder {
      * @param args
      * @return
      */
+
+    @NonNull
     static String[] tokenizeArgs(String args) {
 
         if (args == null) {
-            return null;
+            return new String[]{};
         }
 
         final String[] tokenize = Util.tokenize(args);
@@ -320,6 +324,7 @@ public class MsBuildBuilder extends Builder {
     }
 
     @Extension @Symbol("msbuild")
+    @SuppressFBWarnings(value = "VO_VOLATILE_REFERENCE_TO_ARRAY", justification = "untriaged")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @CopyOnWrite
         private volatile MsBuildInstallation[] installations = new MsBuildInstallation[0];
