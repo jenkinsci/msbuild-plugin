@@ -43,6 +43,7 @@ import java.io.IOException;
  */
 public final class MsBuildInstallation extends ToolInstallation implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
 
+    private static final long serialVersionUID = 1L;
     private final String defaultArgs;
 
     @DataBoundConstructor

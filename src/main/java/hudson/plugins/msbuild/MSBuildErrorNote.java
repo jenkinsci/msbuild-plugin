@@ -14,8 +14,11 @@ import java.util.regex.Pattern;
  */
 public class MSBuildErrorNote extends ConsoleNote {
     /** Pattern to identify error messages */
+
+    private static final long serialVersionUID = 1L;
+
     public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
-    
+
     public MSBuildErrorNote() {
     }
 

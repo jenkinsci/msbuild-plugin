@@ -28,9 +28,12 @@ import hudson.util.ProcessKillingVeto;
 import hudson.util.ProcessTreeRemoting.IOSProcess;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.io.FilenameUtils;
 import org.jenkinsci.Symbol;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 
 /**
  * An extension that avoids mspdbsrv.exe being killed by Jenkins.
@@ -49,17 +52,19 @@ public class MsBuildKillingVeto extends ProcessKillingVeto {
     * 
     */
     @Override
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification = "proc.getArguments() could be null or empty")
     public VetoCause vetoProcessKilling(IOSProcess proc) {
         if (proc == null)
             return null;
 
         List<String> cmdLine = proc.getArguments();
+
         if (cmdLine == null || cmdLine.isEmpty())
             return null;
 
         String command = cmdLine.get(0);
         String exeName = FilenameUtils.getName(command);
-        if (exeName.toLowerCase().equals("mspdbsrv.exe")) {
+        if (exeName.toLowerCase(Locale.getDefault()).equals("mspdbsrv.exe")) {
             return VETO_CAUSE;
         }
         return null;

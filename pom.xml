@@ -27,6 +27,8 @@
         <jenkins.version>2.222</jenkins.version>
         <revision>1.30</revision>
         <changelist>-SNAPSHOT</changelist>
+        <spotbugs.effort>Max</spotbugs.effort>
+        <spotbugs.threshold>Low</spotbugs.threshold>
     </properties>
 
     <developers>
