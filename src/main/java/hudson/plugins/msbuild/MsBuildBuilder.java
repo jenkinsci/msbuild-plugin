@@ -32,6 +32,7 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import javax.annotation.Nonnull;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -305,6 +306,8 @@ public class MsBuildBuilder extends Builder {
      * @param args
      * @return
      */
+
+    @Nonnull
     static String[] tokenizeArgs(String args) {
 
         if (args == null) {
