@@ -24,7 +24,7 @@
     </licenses>
     
     <properties>
-        <jenkins.version>2.332.4</jenkins.version>
+        <jenkins.version>2.361.4</jenkins.version>
         <revision>1.30</revision>
         <changelist>-SNAPSHOT</changelist>
         <spotbugs.effort>Max</spotbugs.effort>
@@ -60,7 +60,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.332.x</artifactId>
+                <artifactId>bom-2.361.x</artifactId>
                 <version>1742.vb_70478c1b_25f</version>
                 <scope>import</scope>
                 <type>pom</type>
