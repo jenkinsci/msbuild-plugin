@@ -11,7 +11,7 @@
     <packaging>hpi</packaging>
     <version>1.31-SNAPSHOT</version>
     <name>Jenkins MSBuild Plugin</name>
-    <url>http://wiki.jenkins-ci.org/display/JENKINS/MSBuild+Plugin</url>
+    <url>https://github.com/jenkinsci/msbuild-plugin/</url>
     <description>Allows using MSBuild to build .NET projects</description>
 
     <licenses>
@@ -87,6 +87,4 @@
             <url>https://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
-</project>  
-  
-
+</project>
