@@ -51,6 +51,7 @@ public class MsBuildBuilder extends Builder {
     private final String msBuildFile;
     private final String cmdLineArgs;
     private final boolean buildVariablesAsProperties;
+    @SuppressFBWarnings(value = "UUF_UNUSED_FIELD", justification = "Retain for compatibility")
     private transient boolean continueOnBuilFailure;
     private final boolean continueOnBuildFailure;
     private final boolean unstableIfWarnings;
