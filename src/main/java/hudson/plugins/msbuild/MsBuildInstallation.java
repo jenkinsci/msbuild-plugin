@@ -48,8 +48,9 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
 
     public void buildEnvVars(EnvVars env) {
         String msBuildBinPath = getHome();
+        String msDefaultArgs = getDefaultArgs();
         env.put("PATH+MSBUILD", msBuildBinPath);
-        env.put("MSBUILD_ARGS", getDefaultArgs());
+        env.put("MSBUILD_ARGS", msDefaultArgs != null ? msDefaultArgs : "");
     }
 
     @DataBoundConstructor
