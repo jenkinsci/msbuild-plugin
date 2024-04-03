@@ -32,8 +32,6 @@ import java.util.Locale;
 
 import org.apache.commons.io.FilenameUtils;
 import org.jenkinsci.Symbol;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 
 /**
  * An extension that avoids mspdbsrv.exe being killed by Jenkins.

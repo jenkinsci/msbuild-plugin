@@ -46,6 +46,13 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
     private static final long serialVersionUID = 1L;
     private final String defaultArgs;
 
+    public void buildEnvVars(EnvVars env) {
+        String msBuildBinPath = getHome();
+        String msDefaultArgs = getDefaultArgs();
+        env.put("PATH+MSBUILD", msBuildBinPath);
+        env.put("MSBUILD_ARGS", msDefaultArgs != null ? msDefaultArgs : "");
+    }
+
     @DataBoundConstructor
     public MsBuildInstallation(String name, String home, String defaultArgs) {
         super(name, home, null);
@@ -85,13 +92,8 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         }
         
         private MsBuildBuilder.DescriptorImpl getDescriptor() {
-            Jenkins jenkins = Jenkins.getInstance();
-            if (jenkins != null && jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class) != null) {
-                return jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class);
-            } else {
-                // To stick with current behavior and meet findbugs requirements
-                throw new NullPointerException("MsBuildBuilder.DescriptorImpl is null");
-            }
+            Jenkins jenkins = Jenkins.get();
+            return jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class);
         }
 
     }
