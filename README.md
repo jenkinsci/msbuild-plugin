@@ -1,6 +1,9 @@
 # MSBuild plugin
 
-[![Build Status](https://ci.jenkins.io/job/Plugins/job/msbuild-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/msbuild-plugin/job/master/)
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins%2Fmsbuild-plugin%2Fmaster)](https://ci.jenkins.io/job/Plugins/job/msbuild-plugin/job/master/)
+[![Jenkins Plugin Version](https://img.shields.io/jenkins/plugin/v/msbuild.svg)](https://plugins.jenkins.io/msbuild)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/msbuild.svg?color=blue)](https://plugins.jenkins.io/msbuild)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 This plugin allows you to use MSBuild to build .NET and Visual Studio
 projects.
