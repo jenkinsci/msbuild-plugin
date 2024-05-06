@@ -24,7 +24,7 @@ public class MsBuildInstallationTest {
 
     @Before
     public void setUp() throws Exception {
-        msBuildInstallation = new MsBuildInstallation("msbuild", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", "/p:Configuration=Release");
+        msBuildInstallation = new MsBuildInstallation("msbuild", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", Collections.emptyList());
         jenkinsRule.jenkins.getDescriptorByType(MsBuildInstallation.DescriptorImpl.class).setInstallations(msBuildInstallation);
     }
 
@@ -34,7 +34,6 @@ public class MsBuildInstallationTest {
         msBuildInstallation.buildEnvVars(envVars);
 
         assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", envVars.get("PATH+MSBUILD"));
-        assertEquals("/p:Configuration=Release", envVars.get("MSBUILD_ARGS"));
     }
 
     @Test
@@ -45,7 +44,6 @@ public class MsBuildInstallationTest {
 
             assertEquals(msBuildInstallation.getName(), newInstallation.getName());
             assertEquals(msBuildInstallation.getHome(), newInstallation.getHome());
-            assertEquals(msBuildInstallation.getDefaultArgs(), newInstallation.getDefaultArgs());
         } catch (Exception e) {
             throw new AssertionError("Not valid configuration for MsBuild", e);}
     }
@@ -59,7 +57,6 @@ public class MsBuildInstallationTest {
 
         assertEquals(msBuildInstallation.getName(), newInstallation.getName());
         assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", newInstallation.getHome());
-        assertEquals(msBuildInstallation.getDefaultArgs(), newInstallation.getDefaultArgs());
     }
 
     @TestExtension

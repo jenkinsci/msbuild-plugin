@@ -25,55 +25,53 @@ package hudson.plugins.msbuild;
 
 import hudson.EnvVars;
 import hudson.Extension;
-import hudson.Util;
 import hudson.model.EnvironmentSpecific;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.slaves.NodeSpecific;
 import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
+import hudson.tools.ToolInstaller;
+import hudson.tools.ToolProperty;
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.util.Collections;
+import java.util.List;
 import java.io.IOException;
 
 /**
  * @author Gregory Boissinot
  */
-public final class MsBuildInstallation extends ToolInstallation implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
+public final class MsBuildInstallation extends ToolInstallation
+        implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
 
     private static final long serialVersionUID = 1L;
-    private final String defaultArgs;
 
     public void buildEnvVars(EnvVars env) {
         String msBuildBinPath = getHome();
-        String msDefaultArgs = getDefaultArgs();
+        env.put("MSBUILD_HOME", msBuildBinPath);
         env.put("PATH+MSBUILD", msBuildBinPath);
-        env.put("MSBUILD_ARGS", msDefaultArgs != null ? msDefaultArgs : "");
     }
 
     @DataBoundConstructor
-    public MsBuildInstallation(String name, String home, String defaultArgs) {
-        super(name, home, null);
-        this.defaultArgs = Util.fixEmpty(defaultArgs);
+    public MsBuildInstallation(String name, String home, List<? extends ToolProperty<?>> properties) {
+        super(name, home, properties);
     }
 
     @Override
     public MsBuildInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MsBuildInstallation(getName(), translateFor(node, log), getDefaultArgs());
+        return new MsBuildInstallation(getName(), translateFor(node, log), getProperties().toList());
     }
 
     @Override
     public MsBuildInstallation forEnvironment(EnvVars environment) {
-        return new MsBuildInstallation(getName(), environment.expand(getHome()), getDefaultArgs());
+        return new MsBuildInstallation(getName(), environment.expand(getHome()), getProperties().toList());
     }
 
-    public String getDefaultArgs() {
-        return this.defaultArgs;
-    }
-
-    @Extension @Symbol("msbuild")
+    @Extension
+    @Symbol("msbuild")
     public static class DescriptorImpl extends ToolDescriptor<MsBuildInstallation> {
 
         @Override
@@ -90,10 +88,15 @@ public final class MsBuildInstallation extends ToolInstallation implements NodeS
         public void setInstallations(MsBuildInstallation... installations) {
             getDescriptor().setInstallations(installations);
         }
-        
+
         private MsBuildBuilder.DescriptorImpl getDescriptor() {
             Jenkins jenkins = Jenkins.get();
             return jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class);
+        }
+
+        @Override
+        public List<? extends ToolInstaller> getDefaultInstallers() {
+            return Collections.singletonList(new MsBuildInstaller(null));
         }
 
     }

@@ -12,7 +12,6 @@
     <version>1.32-SNAPSHOT</version>
     <name>Jenkins MSBuild Plugin</name>
     <url>https://github.com/jenkinsci/msbuild-plugin/</url>
-    <description>Allows using MSBuild to build .NET projects</description>
 
     <licenses>
         <license>
@@ -24,31 +23,13 @@
     </licenses>
     
     <properties>
-        <jenkins.version>2.361.4</jenkins.version>
-        <revision>1.30</revision>
+        <jenkins.version>2.401.1</jenkins.version>
+        <revision>1.31</revision>
         <changelist>-SNAPSHOT</changelist>
+        <hpi.compatibleSinceVersion>1.31</hpi.compatibleSinceVersion>
         <spotbugs.effort>Max</spotbugs.effort>
         <spotbugs.threshold>Low</spotbugs.threshold>
     </properties>
-
-    <developers>
-        <developer>
-            <id>gbois</id>
-            <name>Gregory Boissinot</name>
-            <email>gregory.boissinot@gmail.com</email>
-            <timezone>+1</timezone>
-        </developer>
-        <developer>
-            <id>kdsweeney</id>
-            <name>Kyle Sweeney</name>
-            <email>kyle.sweeney@valtech.com</email>
-        </developer>
-        <developer>
-            <id>marshall777</id>
-            <name>Lionel Cabasson</name>
-            <email>marshall777@gmail.com</email>
-        </developer>
-    </developers>
 
     <scm>
         <connection>scm:git:https://github.com/jenkinsci/msbuild-plugin.git</connection>
@@ -60,8 +41,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.361.x</artifactId>
-                <version>2102.v854b_fec19c92</version>
+                <artifactId>bom-2.401.x</artifactId>
+                <version>2745.vc7b_fe4c876fa_</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>

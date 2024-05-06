@@ -8,6 +8,10 @@
 This plugin allows you to use MSBuild to build .NET and Visual Studio
 projects.
 
+**Important Update (since version 1.32):** We have made changes to the Jenkins plugin by removing the default argument from the Tool configuration. Now, users must manually add the value from this field to each plan. To streamline your setup process, we've introduced a feature that automatically installs the Visual Studio Build Tools.
+
+
+
 ## Usage
 
 To use this plugin, specify the location directory of MSBuild.exe on
@@ -16,7 +20,6 @@ situated in a subfolder of `C:\\WINDOWS\\Microsoft.NET\\Framework`. The
 Visual Studio Build Tools 2022 of "msbuild.exe" is located in
 `"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\"` If you have multiple
 MSBuild versions installed, you can configure multiple executables. 
-
 
 ![](docs/images/jenkins-msbuild.png)
 
@@ -38,7 +41,7 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    bat 'msbuild right-first-time.sln /p:Configuration=Release %MSBUILD_ARGS%'
+                    bat 'msbuild right-first-time.sln /p:Configuration=Release'
                 }
             }
         }
