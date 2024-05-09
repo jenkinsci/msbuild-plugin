@@ -1,0 +1,3 @@
+_extends: .github
+tag-template: msbuild-plugin-$NEXT_MINOR_VERSION
+name-template: MSBuild Plugin $NEXT_MINOR_VERSION
