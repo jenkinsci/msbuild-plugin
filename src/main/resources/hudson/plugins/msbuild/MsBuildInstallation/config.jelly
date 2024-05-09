@@ -30,4 +30,7 @@ THE SOFTWARE.
     <f:entry title="${%Path to MSBuild}" field="home">
         <f:textbox/>
     </f:entry>
+    <f:entry title="${%Default parameters}" field="defaultArgs">
+        <f:textbox/>
+    </f:entry>
 </j:jelly>

@@ -24,7 +24,7 @@ public class MsBuildInstallationTest {
 
     @Before
     public void setUp() throws Exception {
-        msBuildInstallation = new MsBuildInstallation("msbuild", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", Collections.emptyList());
+        msBuildInstallation = new MsBuildInstallation("msbuild", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", Collections.emptyList(), "");
         jenkinsRule.jenkins.getDescriptorByType(MsBuildInstallation.DescriptorImpl.class).setInstallations(msBuildInstallation);
     }
 

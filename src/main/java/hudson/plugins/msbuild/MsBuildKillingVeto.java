@@ -36,15 +36,18 @@ import org.jenkinsci.Symbol;
 /**
  * An extension that avoids mspdbsrv.exe being killed by Jenkins.
  * 
- * Requires a Jenkins version &gt;= 1.619. Will simply be ignored for older versions.
+ * Requires a Jenkins version &gt;= 1.619. Will simply be ignored for older
+ * versions.
  * 
  * See JENKINS-9104
  * 
  * @author Daniel Weber &lt;daniel.weber.dev@gmail.com&gt;
  */
-@Extension(optional = true) @Symbol("msbuildKillingVeto")
+@Extension(optional = true)
+@Symbol("msbuildKillingVeto")
 public class MsBuildKillingVeto extends ProcessKillingVeto {
-    private static final VetoCause VETO_CAUSE = new VetoCause("MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details");
+    private static final VetoCause VETO_CAUSE = new VetoCause(
+            "MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details");
 
     /**
     * 

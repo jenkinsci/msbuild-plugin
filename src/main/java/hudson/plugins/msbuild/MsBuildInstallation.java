@@ -25,6 +25,7 @@ package hudson.plugins.msbuild;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.EnvironmentSpecific;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -35,7 +36,9 @@ import hudson.tools.ToolInstaller;
 import hudson.tools.ToolProperty;
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,26 +51,34 @@ public final class MsBuildInstallation extends ToolInstallation
         implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
 
     private static final long serialVersionUID = 1L;
+    private final String defaultArgs;
+
+    @DataBoundConstructor
+    public MsBuildInstallation(String name, String home, List<? extends ToolProperty<?>> properties, String defaultArgs) {
+        super(name, home, properties);
+        this.defaultArgs = Util.fixEmptyAndTrim(defaultArgs);
+    }
+
+    public String getDefaultArgs() {
+        return defaultArgs;
+    }
 
     public void buildEnvVars(EnvVars env) {
         String msBuildBinPath = getHome();
+        String msDefaultArgs = getDefaultArgs();
         env.put("MSBUILD_HOME", msBuildBinPath);
+        env.put("MSBUILD_ARGS", msDefaultArgs != null ? msDefaultArgs : "");
         env.put("PATH+MSBUILD", msBuildBinPath);
-    }
-
-    @DataBoundConstructor
-    public MsBuildInstallation(String name, String home, List<? extends ToolProperty<?>> properties) {
-        super(name, home, properties);
     }
 
     @Override
     public MsBuildInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MsBuildInstallation(getName(), translateFor(node, log), getProperties().toList());
+        return new MsBuildInstallation(getName(), translateFor(node, log), getProperties().toList(), defaultArgs);
     }
 
     @Override
     public MsBuildInstallation forEnvironment(EnvVars environment) {
-        return new MsBuildInstallation(getName(), environment.expand(getHome()), getProperties().toList());
+        return new MsBuildInstallation(getName(), environment.expand(getHome()), getProperties().toList(), defaultArgs);
     }
 
     @Extension
@@ -99,6 +110,10 @@ public final class MsBuildInstallation extends ToolInstallation
             return Collections.singletonList(new MsBuildInstaller(null));
         }
 
+        @Override
+        public MsBuildInstallation newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            return (MsBuildInstallation)super.newInstance(req, formData);
+        }
     }
 
 }

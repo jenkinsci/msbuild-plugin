@@ -36,6 +36,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.nio.charset.Charset;
@@ -44,6 +46,85 @@ import java.nio.charset.Charset;
  * @author kyle.sweeney@valtech.com
  */
 public class MsBuildBuilder extends Builder {
+
+    private static final Map<String, Integer> CHARSET_CODE_MAP = new HashMap<>();
+
+    static {
+        CHARSET_CODE_MAP.put("UTF-8", 65001);
+        CHARSET_CODE_MAP.put("IBM437", 437);
+        CHARSET_CODE_MAP.put("IBM850", 850);
+        CHARSET_CODE_MAP.put("IBM852", 852);
+        CHARSET_CODE_MAP.put("SHIFT_JIS", 932);
+        CHARSET_CODE_MAP.put("US-ASCII", 20127);
+        CHARSET_CODE_MAP.put("EUC-JP", 20932);
+        CHARSET_CODE_MAP.put("ISO-8859-1", 28591);
+        CHARSET_CODE_MAP.put("ISO-8859-2", 28592);
+        CHARSET_CODE_MAP.put("IBM00858", 858);
+        CHARSET_CODE_MAP.put("IBM775", 775);
+        CHARSET_CODE_MAP.put("IBM855", 855);
+        CHARSET_CODE_MAP.put("IBM857", 857);
+        CHARSET_CODE_MAP.put("ISO-8859-4", 28594);
+        CHARSET_CODE_MAP.put("ISO-8859-5", 28595);
+        CHARSET_CODE_MAP.put("ISO-8859-7", 28597);
+        CHARSET_CODE_MAP.put("ISO-8859-9", 28599);
+        CHARSET_CODE_MAP.put("ISO-8859-13", 28603);
+        CHARSET_CODE_MAP.put("ISO-8859-15", 28605);
+        CHARSET_CODE_MAP.put("KOI8-R", 20866);
+        CHARSET_CODE_MAP.put("KOI8-U", 21866);
+        CHARSET_CODE_MAP.put("UTF-16", 1200);
+        CHARSET_CODE_MAP.put("UTF-32", 12000);
+        CHARSET_CODE_MAP.put("UTF-32BE", 12001);
+        CHARSET_CODE_MAP.put("WINDOWS-1250", 1250);
+        CHARSET_CODE_MAP.put("WINDOWS-1251", 1251);
+        CHARSET_CODE_MAP.put("WINDOWS-1252", 1252);
+        CHARSET_CODE_MAP.put("WINDOWS-1253", 1253);
+        CHARSET_CODE_MAP.put("WINDOWS-1254", 1254);
+        CHARSET_CODE_MAP.put("WINDOWS-1257", 1257);
+        CHARSET_CODE_MAP.put("BIG5", 950);
+        CHARSET_CODE_MAP.put("EUC-KR", 51949);
+        CHARSET_CODE_MAP.put("GB18030", 54936);
+        CHARSET_CODE_MAP.put("GB2312", 936);
+        CHARSET_CODE_MAP.put("IBM-THAI", 20838);
+        CHARSET_CODE_MAP.put("IBM01140", 1140);
+        CHARSET_CODE_MAP.put("IBM01141", 1141);
+        CHARSET_CODE_MAP.put("IBM01142", 1142);
+        CHARSET_CODE_MAP.put("IBM01143", 1143);
+        CHARSET_CODE_MAP.put("IBM01144", 1144);
+        CHARSET_CODE_MAP.put("IBM01145", 1145);
+        CHARSET_CODE_MAP.put("IBM01146", 1146);
+        CHARSET_CODE_MAP.put("IBM01147", 1147);
+        CHARSET_CODE_MAP.put("IBM01148", 1148);
+        CHARSET_CODE_MAP.put("IBM01149", 1149);
+        CHARSET_CODE_MAP.put("IBM037", 37);
+        CHARSET_CODE_MAP.put("IBM1026", 1026);
+        CHARSET_CODE_MAP.put("IBM273", 20273);
+        CHARSET_CODE_MAP.put("IBM277", 20277);
+        CHARSET_CODE_MAP.put("IBM278", 20278);
+        CHARSET_CODE_MAP.put("IBM280", 20280);
+        CHARSET_CODE_MAP.put("IBM284", 20284);
+        CHARSET_CODE_MAP.put("IBM285", 20285);
+        CHARSET_CODE_MAP.put("IBM297", 20297);  
+        CHARSET_CODE_MAP.put("IBM420", 20420);
+        CHARSET_CODE_MAP.put("IBM424", 20424);
+        CHARSET_CODE_MAP.put("IBM500", 500);
+        CHARSET_CODE_MAP.put("IBM860", 860);
+        CHARSET_CODE_MAP.put("IBM861", 861);
+        CHARSET_CODE_MAP.put("IBM863", 863);
+        CHARSET_CODE_MAP.put("IBM864", 864);
+        CHARSET_CODE_MAP.put("IBM865", 865);
+        CHARSET_CODE_MAP.put("IBM869", 869);
+        CHARSET_CODE_MAP.put("IBM870", 870);
+        CHARSET_CODE_MAP.put("IBM871", 20871);
+        CHARSET_CODE_MAP.put("ISO-2022-JP", 50220);
+        CHARSET_CODE_MAP.put("ISO-2022-KR", 50225);
+        CHARSET_CODE_MAP.put("ISO-8859-3", 28593);
+        CHARSET_CODE_MAP.put("ISO-8859-6", 28596);
+        CHARSET_CODE_MAP.put("ISO-8859-8", 28598);
+        CHARSET_CODE_MAP.put("WINDOWS-1255", 1255);
+        CHARSET_CODE_MAP.put("WINDOWS-1256", 1256);
+        CHARSET_CODE_MAP.put("WINDOWS-1258", 1258);
+    }
+
     /**
      * GUI fields
      */
@@ -73,7 +154,6 @@ public class MsBuildBuilder extends Builder {
      *                                   warnings
      */
     @Deprecated
-    @SuppressWarnings("unused")
     public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs,
             boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
         // By default, doNotUseChcpCommand=false
@@ -99,7 +179,6 @@ public class MsBuildBuilder extends Builder {
      *                                   before running msbuild
      */
     @DataBoundConstructor
-    @SuppressWarnings("unused")
     public MsBuildBuilder(String msBuildName, String msBuildFile, String cmdLineArgs,
             boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings,
             boolean doNotUseChcpCommand) {
@@ -112,37 +191,30 @@ public class MsBuildBuilder extends Builder {
         this.doNotUseChcpCommand = doNotUseChcpCommand;
     }
 
-    @SuppressWarnings("unused")
     public String getMsBuildFile() {
         return msBuildFile;
     }
 
-    @SuppressWarnings("unused")
     public String getMsBuildName() {
         return msBuildName;
     }
 
-    @SuppressWarnings("unused")
     public String getCmdLineArgs() {
         return cmdLineArgs;
     }
 
-    @SuppressWarnings("unused")
     public boolean getBuildVariablesAsProperties() {
         return buildVariablesAsProperties;
     }
 
-    @SuppressWarnings("unused")
     public boolean getContinueOnBuildFailure() {
         return continueOnBuildFailure;
     }
 
-    @SuppressWarnings("unused")
     public boolean getUnstableIfWarnings() {
         return unstableIfWarnings;
     }
 
-    @SuppressWarnings("unused")
     public boolean getDoNotUseChcpCommand() {
         return doNotUseChcpCommand;
     }
@@ -188,6 +260,10 @@ public class MsBuildBuilder extends Builder {
 
                 listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
                 args.add(pathToMsBuild);
+
+                if (ai.getDefaultArgs() != null) {
+                    args.add(tokenizeArgs(ai.getDefaultArgs()));
+                }
             }
         }
 
@@ -267,7 +343,7 @@ public class MsBuildBuilder extends Builder {
         }
     }
 
-    private Map<String, String> getPropertiesVariables(AbstractBuild build) {
+    private Map<String, String> getPropertiesVariables(AbstractBuild<?, ?> build) {
 
         Map<String, String> buildVariables = build.getBuildVariables();
 
@@ -349,6 +425,7 @@ public class MsBuildBuilder extends Builder {
         }
 
         @Override
+        @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
         }
@@ -367,155 +444,14 @@ public class MsBuildBuilder extends Builder {
         }
     }
 
-    private static int getCodePageIdentifier(Charset charset) {
-        final String s_charset = charset.name();
-        if (s_charset.equalsIgnoreCase("utf-8")) // Unicode
-            return 65001;
-        else if (s_charset.equalsIgnoreCase("ibm437")) // US
-            return 437;
-        else if (s_charset.equalsIgnoreCase("ibm850")) // OEM Multilingual Latin 1
-            return 850;
-        else if (s_charset.equalsIgnoreCase("ibm852")) // OEM Latin2
-            return 852;
-        else if (s_charset.equalsIgnoreCase("shift_jis") || s_charset.equalsIgnoreCase("windows-31j"))// Japanese
-            return 932;
-        else if (s_charset.equalsIgnoreCase("us-ascii")) // US-ASCII
-            return 20127;
-        else if (s_charset.equalsIgnoreCase("euc-jp")) // Japanese
-            return 20932;
-        else if (s_charset.equalsIgnoreCase("iso-8859-1")) // Latin 1
-            return 28591;
-        else if (s_charset.equalsIgnoreCase("iso-8859-2")) // Latin 2
-            return 28592;
-        else if (s_charset.equalsIgnoreCase("IBM00858"))
-            return 858;
-        else if (s_charset.equalsIgnoreCase("IBM775"))
-            return 775;
-        else if (s_charset.equalsIgnoreCase("IBM855"))
-            return 855;
-        else if (s_charset.equalsIgnoreCase("IBM857"))
-            return 857;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-4"))
-            return 28594;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-5"))
-            return 28595;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-7"))
-            return 28597;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-9"))
-            return 28599;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-13"))
-            return 28603;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-15"))
-            return 28605;
-        else if (s_charset.equalsIgnoreCase("KOI8-R"))
-            return 20866;
-        else if (s_charset.equalsIgnoreCase("KOI8-U"))
-            return 21866;
-        else if (s_charset.equalsIgnoreCase("UTF-16"))
-            return 1200;
-        else if (s_charset.equalsIgnoreCase("UTF-32"))
-            return 12000;
-        else if (s_charset.equalsIgnoreCase("UTF-32BE"))
-            return 12001;
-        else if (s_charset.equalsIgnoreCase("windows-1250"))
-            return 1250;
-        else if (s_charset.equalsIgnoreCase("windows-1251"))
-            return 1251;
-        else if (s_charset.equalsIgnoreCase("windows-1252"))
-            return 1252;
-        else if (s_charset.equalsIgnoreCase("windows-1253"))
-            return 1253;
-        else if (s_charset.equalsIgnoreCase("windows-1254"))
-            return 1254;
-        else if (s_charset.equalsIgnoreCase("windows-1257"))
-            return 1257;
-        else if (s_charset.equalsIgnoreCase("Big5"))
-            return 950;
-        else if (s_charset.equalsIgnoreCase("EUC-KR"))
-            return 51949;
-        else if (s_charset.equalsIgnoreCase("GB18030"))
-            return 54936;
-        else if (s_charset.equalsIgnoreCase("GB2312"))
-            return 936;
-        else if (s_charset.equalsIgnoreCase("IBM-Thai"))
-            return 20838;
-        else if (s_charset.equalsIgnoreCase("IBM01140"))
-            return 1140;
-        else if (s_charset.equalsIgnoreCase("IBM01141"))
-            return 1141;
-        else if (s_charset.equalsIgnoreCase("IBM01142"))
-            return 1142;
-        else if (s_charset.equalsIgnoreCase("IBM01143"))
-            return 1143;
-        else if (s_charset.equalsIgnoreCase("IBM01144"))
-            return 1144;
-        else if (s_charset.equalsIgnoreCase("IBM01145"))
-            return 1145;
-        else if (s_charset.equalsIgnoreCase("IBM01146"))
-            return 1146;
-        else if (s_charset.equalsIgnoreCase("IBM01147"))
-            return 1147;
-        else if (s_charset.equalsIgnoreCase("IBM01148"))
-            return 1148;
-        else if (s_charset.equalsIgnoreCase("IBM01149"))
-            return 1149;
-        else if (s_charset.equalsIgnoreCase("IBM037"))
-            return 37;
-        else if (s_charset.equalsIgnoreCase("IBM1026"))
-            return 1026;
-        else if (s_charset.equalsIgnoreCase("IBM273"))
-            return 20273;
-        else if (s_charset.equalsIgnoreCase("IBM277"))
-            return 20277;
-        else if (s_charset.equalsIgnoreCase("IBM278"))
-            return 20278;
-        else if (s_charset.equalsIgnoreCase("IBM280"))
-            return 20280;
-        else if (s_charset.equalsIgnoreCase("IBM284"))
-            return 20284;
-        else if (s_charset.equalsIgnoreCase("IBM285"))
-            return 20285;
-        else if (s_charset.equalsIgnoreCase("IBM297"))
-            return 20297;
-        else if (s_charset.equalsIgnoreCase("IBM420"))
-            return 20420;
-        else if (s_charset.equalsIgnoreCase("IBM424"))
-            return 20424;
-        else if (s_charset.equalsIgnoreCase("IBM500"))
-            return 500;
-        else if (s_charset.equalsIgnoreCase("IBM860"))
-            return 860;
-        else if (s_charset.equalsIgnoreCase("IBM861"))
-            return 861;
-        else if (s_charset.equalsIgnoreCase("IBM863"))
-            return 863;
-        else if (s_charset.equalsIgnoreCase("IBM864"))
-            return 864;
-        else if (s_charset.equalsIgnoreCase("IBM865"))
-            return 865;
-        else if (s_charset.equalsIgnoreCase("IBM869"))
-            return 869;
-        else if (s_charset.equalsIgnoreCase("IBM870"))
-            return 870;
-        else if (s_charset.equalsIgnoreCase("IBM871"))
-            return 20871;
-        else if (s_charset.equalsIgnoreCase("ISO-2022-JP"))
-            return 50220;
-        else if (s_charset.equalsIgnoreCase("ISO-2022-KR"))
-            return 50225;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-3"))
-            return 28593;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-6"))
-            return 28596;
-        else if (s_charset.equalsIgnoreCase("ISO-8859-8"))
-            return 28598;
-        else if (s_charset.equalsIgnoreCase("windows-1255"))
-            return 1255;
-        else if (s_charset.equalsIgnoreCase("windows-1256"))
-            return 1256;
-        else if (s_charset.equalsIgnoreCase("windows-1258"))
-            return 1258;
-        else
-            return 0;
+    /**
+     * Get the code page identifier for the given charset.
+     *
+     * @param charset the charset
+     * @return the code page identifier
+     */
+    public static int getCodePageIdentifier(Charset charset) {
+        Integer code = CHARSET_CODE_MAP.get(charset.name().toUpperCase(Locale.ENGLISH));
+        return code != null ? code : 0;
     }
 }

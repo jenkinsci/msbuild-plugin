@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 /**
  * Annotation for MSBuild and CSC error messages
  */
-public class MSBuildErrorNote extends ConsoleNote {
+public class MSBuildErrorNote extends ConsoleNote<Object> {
     /** Pattern to identify error messages */
 
     private static final long serialVersionUID = 1L;
@@ -23,7 +23,7 @@ public class MSBuildErrorNote extends ConsoleNote {
     }
 
     @Override
-    public ConsoleAnnotator annotate(Object context, MarkupText text, int charPos) {
+    public ConsoleAnnotator<Object> annotate(Object context, MarkupText text, int charPos) {
         text.addMarkup(0, text.length(), "<span class=error-inline>", "</span>");
         return null;
     }
