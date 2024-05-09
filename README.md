@@ -8,9 +8,6 @@
 This plugin allows you to use MSBuild to build .NET and Visual Studio
 projects.
 
-**Important Update (since version 1.32):** We have made changes to the Jenkins plugin by removing the default argument from the Tool configuration. Now, users must manually add the value from this field to each plan. To streamline your setup process, we've introduced a feature that automatically installs the Visual Studio Build Tools.
-
-
 
 ## Usage
 
@@ -41,7 +38,7 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    bat 'msbuild right-first-time.sln /p:Configuration=Release'
+                    bat 'msbuild right-first-time.sln /p:Configuration=Release %MSBUILD_ARGS%'
                 }
             }
         }
