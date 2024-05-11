@@ -27,7 +27,7 @@ THE SOFTWARE.
     <f:entry title="${%Name}" field="name">
         <f:textbox/>
     </f:entry>
-    <f:entry title="${%Path to MSBuild}" field="home">
+    <f:entry title="${%MSBUILD_HOME}" field="home">
         <f:textbox/>
     </f:entry>
     <f:entry title="${%Default parameters}" field="defaultArgs">
