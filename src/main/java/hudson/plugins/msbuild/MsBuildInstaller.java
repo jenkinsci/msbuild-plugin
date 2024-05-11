@@ -463,8 +463,6 @@ public class MsBuildInstaller extends ToolInstaller {
      * @param targetPath FilePath
      * 
      * @param listener   TaskListener
-     * 
-     * @return void
      */
     public static void downloadFile(URI uri, FilePath targetPath, TaskListener listener) throws IOException {
         uri.toURL();
