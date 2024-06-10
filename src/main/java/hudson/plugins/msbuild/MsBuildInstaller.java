@@ -1,8 +1,10 @@
 package hudson.plugins.msbuild;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
@@ -20,17 +22,21 @@ import org.kohsuke.stapler.DataBoundSetter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 public class MsBuildInstaller extends ToolInstaller {
 
@@ -89,7 +95,7 @@ public class MsBuildInstaller extends ToolInstaller {
     public FilePath performInstallation(ToolInstallation tool, Node node, TaskListener log)
             throws IOException, InterruptedException {
 
-        if (!checkIfOsIsWindows(log)) {
+        if (!checkIfOsIsWindows(node)) {
             throw new UnsupportedOperationException("MSBuild is only available on Windows");
         }
 
@@ -109,7 +115,7 @@ public class MsBuildInstaller extends ToolInstaller {
         try {
             URI uri = new URI(url);
             log.getLogger().println("Downloading MSBuild version " + selectedVersion + " from " + url);
-            downloadFile(uri, vs_BuildToolsExePath, log);
+            downloadFile(uri, vs_BuildToolsExePath);
         } catch (URISyntaxException e) {
             throw new IOException("Invalid URI: " + url);
         }
@@ -169,7 +175,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * @throws IOException
      */
     private static boolean isInstallerRunning(String processName) throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder("tasklist");
+        ProcessBuilder processBuilder = new ProcessBuilder("jps", "-l");
         Process process = processBuilder.start();
 
         try (BufferedReader reader = new BufferedReader(
@@ -249,9 +255,9 @@ public class MsBuildInstaller extends ToolInstaller {
     }
 
     /**
-     * Check if the OS is Windows
-     * 
-     * @param log TaskListener
+     * Check if the OS is Windows.
+     *
+     * @param node Node
      * 
      * @return boolean
      * 
@@ -259,13 +265,17 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws InterruptedException
      */
-    private boolean checkIfOsIsWindows(TaskListener log) {
-        String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
-        if (!os.contains("win")) {
-            log.getLogger().println("MSBuild is only available on Windows");
-            return false;
+    private boolean checkIfOsIsWindows(Node node) throws IOException, InterruptedException {
+        Computer computer = node.toComputer();
+        if (computer != null) {
+            EnvVars envVars = computer.getEnvironment();
+            // First check the 'OS' environment variable which is set to 'Windows_NT' on
+            // Windows systems
+            if (envVars != null && envVars.containsKey("OS") && envVars.get("OS").contains("Windows_NT")) {
+                return true;
+            }
         }
-        return true;
+        return false;
     }
 
     /**
@@ -462,10 +472,19 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @param targetPath FilePath
      * 
-     * @param listener   TaskListener
      */
-    public static void downloadFile(URI uri, FilePath targetPath, TaskListener listener) throws IOException {
-        uri.toURL();
+    public static void downloadFile(URI uri, FilePath targetPath)
+            throws IOException, InterruptedException {
+        URL url = uri.toURL();
+        URLConnection connection = url.openConnection();
+        try (InputStream in = connection.getInputStream();
+                OutputStream out = targetPath.write()) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+        }
     }
 
     /**
