@@ -3,29 +3,38 @@ package hudson.plugins.msbuild;
 import hudson.EnvVars;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import hudson.tools.ToolInstallation;
+import hudson.tools.ToolProperty;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.TestExtension;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
-import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MsBuildInstallationTest {
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    @Mock
+    private Node node;
+
+    @Mock
+    private TaskListener taskListener;
 
     private MsBuildInstallation msBuildInstallation;
 
     @Before
-    public void setUp() throws Exception {
-        msBuildInstallation = new MsBuildInstallation("msbuild", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", Collections.emptyList(), "");
-        jenkinsRule.jenkins.getDescriptorByType(MsBuildInstallation.DescriptorImpl.class).setInstallations(msBuildInstallation);
+    public void setUp() {
+        List<ToolProperty<?>> properties = Collections.emptyList();
+        msBuildInstallation = new MsBuildInstallation("Test", "/path/to/msbuild", properties, "/p:Configuration=Release");
+    }
+
+    @Test
+    public void testGetDefaultArgs() {
+        assertEquals("/p:Configuration=Release", msBuildInstallation.getDefaultArgs());
     }
 
     @Test
@@ -33,37 +42,20 @@ public class MsBuildInstallationTest {
         EnvVars envVars = new EnvVars();
         msBuildInstallation.buildEnvVars(envVars);
 
-        assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", envVars.get("PATH+MSBUILD"));
-    }
-
-    @Test
-    public void testForNode() throws IOException, InterruptedException {
-        try {
-            Node node = jenkinsRule.createSlave();
-            MsBuildInstallation newInstallation = msBuildInstallation.forNode(node, TaskListener.NULL);
-
-            assertEquals(msBuildInstallation.getName(), newInstallation.getName());
-            assertEquals(msBuildInstallation.getHome(), newInstallation.getHome());
-        } catch (Exception e) {
-            throw new AssertionError("Not valid configuration for MsBuild", e);}
+        assertEquals("/path/to/msbuild", envVars.get("MSBUILD_HOME"));
+        assertEquals("/p:Configuration=Release", envVars.get("MSBUILD_ARGS"));
+        assertEquals("/path/to/msbuild", envVars.get("PATH+MSBUILD"));
     }
 
     @Test
     public void testForEnvironment() {
         EnvVars environment = new EnvVars();
-        environment.put("HOME", "C:\\Program Files (x86)\\Microsoft Visual Studio\\bin");
+        environment.put("HOME", "/path/to/msbuild");
 
-        MsBuildInstallation newInstallation = msBuildInstallation.forEnvironment(environment);
+        MsBuildInstallation updatedInstallation = msBuildInstallation.forEnvironment(environment);
 
-        assertEquals(msBuildInstallation.getName(), newInstallation.getName());
-        assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin", newInstallation.getHome());
-    }
-
-    @TestExtension
-    public static class TestToolInstallation extends ToolInstallation {
-
-        public TestToolInstallation() {
-            super("", "", Collections.emptyList());
-        }
+        assertEquals(msBuildInstallation.getName(), updatedInstallation.getName());
+        assertEquals("/path/to/msbuild", updatedInstallation.getHome());
+        assertEquals(msBuildInstallation.getDefaultArgs(), updatedInstallation.getDefaultArgs());
     }
 }

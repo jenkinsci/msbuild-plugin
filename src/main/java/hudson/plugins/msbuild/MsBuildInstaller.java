@@ -111,7 +111,7 @@ public class MsBuildInstaller extends ToolInstaller {
             return msBuildBinPath;
         }
         buildToolsInstallPath.mkdirs();
-        String url = ((DescriptorImpl) getDescriptor()).getUrlForVersion(selectedVersion);
+        String url = DescriptorImpl.getUrlForVersion(selectedVersion);
         try {
             URI uri = new URI(url);
             log.getLogger().println("Downloading MSBuild version " + selectedVersion + " from " + url);
@@ -265,7 +265,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws InterruptedException
      */
-    private boolean checkIfOsIsWindows(Node node) throws IOException, InterruptedException {
+    public static boolean checkIfOsIsWindows(Node node) throws IOException, InterruptedException {
         Computer computer = node.toComputer();
         if (computer != null) {
             EnvVars envVars = computer.getEnvironment();
@@ -518,7 +518,7 @@ public class MsBuildInstaller extends ToolInstaller {
                     "https://aka.ms/vs/16/release/vs_buildtools.exe");
         }
 
-        public String getUrlForVersion(String version) {
+        public static String getUrlForVersion(String version) {
             return VERSION_URL_MAP.get(version);
         }
 
