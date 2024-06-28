@@ -48,6 +48,27 @@ public class MsBuildInstallationTest {
     }
 
     @Test
+    public void testBuildEnvVarsWithNullDefaultArgs() {
+        List<ToolProperty<?>> properties = Collections.emptyList();
+        MsBuildInstallation msBuildInstallationWithNullArgs = new MsBuildInstallation("Test", "/path/to/msbuild", properties, null);
+        EnvVars envVars = new EnvVars();
+        msBuildInstallationWithNullArgs.buildEnvVars(envVars);
+
+        assertEquals("/path/to/msbuild", envVars.get("MSBUILD_HOME"));
+        assertEquals("", envVars.get("MSBUILD_ARGS")); // Ensuring that MSBUILD_ARGS is set to an empty string when defaultArgs is null
+        assertEquals("/path/to/msbuild", envVars.get("PATH+MSBUILD"));
+    }
+
+    @Test
+    public void testForNode() throws Exception {
+        MsBuildInstallation updatedInstallation = msBuildInstallation.forNode(node, taskListener);
+
+        assertEquals(msBuildInstallation.getName(), updatedInstallation.getName());
+        assertEquals("/path/to/msbuild", updatedInstallation.getHome());
+        assertEquals(msBuildInstallation.getDefaultArgs(), updatedInstallation.getDefaultArgs());
+    }
+
+    @Test
     public void testForEnvironment() {
         EnvVars environment = new EnvVars();
         environment.put("HOME", "/path/to/msbuild");
@@ -57,5 +78,11 @@ public class MsBuildInstallationTest {
         assertEquals(msBuildInstallation.getName(), updatedInstallation.getName());
         assertEquals("/path/to/msbuild", updatedInstallation.getHome());
         assertEquals(msBuildInstallation.getDefaultArgs(), updatedInstallation.getDefaultArgs());
+    }
+
+    @Test
+    public void testGetDisplayName() {
+        MsBuildInstallation.DescriptorImpl descriptor = new MsBuildInstallation.DescriptorImpl();
+        assertEquals("MSBuild", descriptor.getDisplayName());
     }
 }

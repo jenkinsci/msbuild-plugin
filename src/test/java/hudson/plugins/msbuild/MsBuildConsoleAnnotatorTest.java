@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MsBuildConsoleAnnotatorTest {
 
@@ -53,6 +54,19 @@ public class MsBuildConsoleAnnotatorTest {
 
         assertEquals(1, annotator.getNumberOfWarnings());
         assertEquals(1, annotator.getNumberOfErrors());
+    }
+
+    @Test
+    public void testMultipleCloseCalls() throws IOException {
+        ByteArrayOutputStream mockOutputStream = new ByteArrayOutputStream();
+        MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(mockOutputStream, StandardCharsets.UTF_8);
+
+        annotator.close();
+        try {
+            annotator.close(); // Trying to close again to see if it handles multiple closes gracefully
+        } catch (IOException e) {
+            fail("Should not throw an exception on multiple closes");
+        }
     }
 
     private static class MockMSBuildWarningNote extends MSBuildWarningNote {
