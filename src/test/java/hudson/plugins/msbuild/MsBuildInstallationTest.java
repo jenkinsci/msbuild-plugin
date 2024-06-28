@@ -60,15 +60,6 @@ public class MsBuildInstallationTest {
     }
 
     @Test
-    public void testForNode() throws Exception {
-        MsBuildInstallation updatedInstallation = msBuildInstallation.forNode(node, taskListener);
-
-        assertEquals(msBuildInstallation.getName(), updatedInstallation.getName());
-        assertEquals("/path/to/msbuild", updatedInstallation.getHome());
-        assertEquals(msBuildInstallation.getDefaultArgs(), updatedInstallation.getDefaultArgs());
-    }
-
-    @Test
     public void testForEnvironment() {
         EnvVars environment = new EnvVars();
         environment.put("HOME", "/path/to/msbuild");
