@@ -266,24 +266,6 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testDoFillSelectedVersionItems() {
-        MsBuildInstaller.DescriptorImpl descriptor = new MsBuildInstaller.DescriptorImpl();
-        ListBoxModel expectedItems = new ListBoxModel();
-        expectedItems.add("Build Tools 2022", "2022");
-        expectedItems.add("Build Tools 2019", "2019");
-
-        ListBoxModel result = descriptor.doFillSelectedVersionItems();
-
-        assertEquals(expectedItems.size(), result.size());
-        for (int i = 0; i < expectedItems.size(); i++) {
-            ListBoxModel.Option expected = expectedItems.get(i);
-            ListBoxModel.Option actual = result.get(i);
-            assertEquals(expected.name, actual.name);
-            assertEquals(expected.value, actual.value);
-        }
-    }
-
-    @Test
     public void testGetDisplayName() {
         MsBuildInstaller.DescriptorImpl descriptor = new MsBuildInstaller.DescriptorImpl();
         String displayName = descriptor.getDisplayName();

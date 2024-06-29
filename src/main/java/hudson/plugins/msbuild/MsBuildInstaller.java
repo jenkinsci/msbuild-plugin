@@ -12,12 +12,13 @@ import hudson.tools.ToolInstaller;
 import hudson.tools.ToolInstallerDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ListBoxModel;
-
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -525,7 +526,9 @@ public class MsBuildInstaller extends ToolInstaller {
             return VERSION_URL_MAP.get(version);
         }
 
+        @RequirePOST
         public ListBoxModel doFillSelectedVersionItems() {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             ListBoxModel items = new ListBoxModel();
             List<String> versions = new ArrayList<>(VERSION_URL_MAP.keySet());
             Collections.sort(versions, Collections.reverseOrder());
