@@ -49,6 +49,17 @@ public class MsBuildKillingVetoTest {
     }
 
     @Test
+    public void testProcessIsNull() {
+        assertNull("Should return null if process is null", testee.vetoProcessKilling(null));
+    }
+
+    @Test
+    public void testCommandLineIsEmpty() {
+        IOSProcess emptyArgsProcess = mockProcess();
+        assertNull("Should return null if command line arguments are empty", testee.vetoProcessKilling(emptyArgsProcess));
+    }
+
+    @Test
     public void testSparesMsPDBSrv() {
         VetoCause veto = testee.vetoProcessKilling(mockProcess("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin\\mspdbsrv.exe", "something", "else"));
         assertNotNull(veto);

@@ -37,6 +37,8 @@ import org.apache.commons.lang.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MsBuildInstaller extends ToolInstaller {
 
@@ -111,7 +113,7 @@ public class MsBuildInstaller extends ToolInstaller {
             return msBuildBinPath;
         }
         buildToolsInstallPath.mkdirs();
-        String url = ((DescriptorImpl) getDescriptor()).getUrlForVersion(selectedVersion);
+        String url = DescriptorImpl.getUrlForVersion(selectedVersion);
         try {
             URI uri = new URI(url);
             log.getLogger().println("Downloading MSBuild version " + selectedVersion + " from " + url);
@@ -174,7 +176,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws IOException
      */
-    private static boolean isInstallerRunning(String processName) throws IOException {
+    public static boolean isInstallerRunning(String processName) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder("jps", "-l");
         Process process = processBuilder.start();
 
@@ -197,7 +199,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @return FilePath
      */
-    private static FilePath buildToolsInstallPath(Node node, String selectedVersion, String givenInstallPath) {
+    public static FilePath buildToolsInstallPath(Node node, String selectedVersion, String givenInstallPath) {
         if (givenInstallPath != null) {
             return new FilePath(node.getChannel(), givenInstallPath);
         }
@@ -216,7 +218,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @return FilePath
      */
-    private static FilePath msBuildBinPath(Node node, String selectedVersion, String givenInstallPath) {
+    public static FilePath msBuildBinPath(Node node, String selectedVersion, String givenInstallPath) {
         if (givenInstallPath != null && !givenInstallPath.isEmpty()) {
             return new FilePath(node.getChannel(), givenInstallPath).child("\\MSBuild\\Current\\Bin");
         }
@@ -230,7 +232,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @return FilePath
      */
-    private static FilePath getVs_BuildToolsExePath(FilePath expected) {
+    public static FilePath getVs_BuildToolsExePath(FilePath expected) {
         return expected.child("vs_BuildTools.exe");
     }
 
@@ -241,14 +243,15 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @return String
      */
-    private static String extractInstallPath(String givenArguments) {
-        if (givenArguments != null && StringUtils.contains(givenArguments, "--installPath")) {
-            // Extract the existing installPath value
-            String[] args = givenArguments.split(" ");
-            for (int i = 0; i < args.length - 1; i++) {
-                if (args[i].equals("--installPath")) {
-                    return args[i + 1];
-                }
+    public static String extractInstallPath(String givenArguments) {
+        if (givenArguments != null) {
+            // Use a regex to find the --installPath followed by a quoted string or a single word
+            Pattern pattern = Pattern.compile("--installPath\\s+\"([^\"]*)\"|--installPath\\s+(\\S+)");
+            Matcher matcher = pattern.matcher(givenArguments);
+    
+            if (matcher.find()) {
+                // Check if the path is captured from a quoted string or a non-quoted string
+                return matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
             }
         }
         return null;
@@ -265,7 +268,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws InterruptedException
      */
-    private boolean checkIfOsIsWindows(Node node) throws IOException, InterruptedException {
+    public static boolean checkIfOsIsWindows(Node node) throws IOException, InterruptedException {
         Computer computer = node.toComputer();
         if (computer != null) {
             EnvVars envVars = computer.getEnvironment();
@@ -348,7 +351,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws InterruptedException
      */
-    private static boolean useConfigFile(String vsconfig, FilePath expected)
+    public static boolean useConfigFile(String vsconfig, FilePath expected)
             throws IOException, InterruptedException {
         if (vsconfig != null && !vsconfig.isEmpty()) {
             FilePath vsConfigFile = expected.child(".vsconfig");
@@ -401,7 +404,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @return boolean
      */
-    private static boolean needsUpdate(FilePath expected) {
+    public static boolean needsUpdate(FilePath expected) {
         try {
             FilePath needsModify = expected.child("config.json");
             if (needsModify.exists()) {
@@ -454,7 +457,7 @@ public class MsBuildInstaller extends ToolInstaller {
      * 
      * @throws InterruptedException
      */
-    private static boolean needsModify(FilePath expected) throws IOException, InterruptedException {
+    public static boolean needsModify(FilePath expected) throws IOException, InterruptedException {
         FilePath needsModify = expected.child("config.json");
         if (needsModify.exists()) {
             JSONObject json = JSONObject.fromObject(needsModify.readToString());
@@ -518,7 +521,7 @@ public class MsBuildInstaller extends ToolInstaller {
                     "https://aka.ms/vs/16/release/vs_buildtools.exe");
         }
 
-        public String getUrlForVersion(String version) {
+        public static String getUrlForVersion(String version) {
             return VERSION_URL_MAP.get(version);
         }
 
