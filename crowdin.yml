@@ -3,7 +3,7 @@ files:
     ignore:
     - '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.properties'
     translation: '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.properties'
-    escape_quotes: 1
+    escape_quotes: 0
     escape_special_characters: 0
   - source: '/src/main/resources/hudson/plugins/msbuild/**/*.html'
     ignore:
