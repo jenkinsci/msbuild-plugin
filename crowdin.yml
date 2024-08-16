@@ -1,14 +1,20 @@
 files:
   - source: '/src/main/resources/hudson/plugins/msbuild/**/*.properties'
     ignore:
-    - '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.properties'
+      - '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.properties'
     translation: '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.properties'
+    "excluded_target_languages": [
+      "en"
+    ]
     escape_quotes: 0
     escape_special_characters: 0
   - source: '/src/main/resources/hudson/plugins/msbuild/**/*.html'
     ignore:
-    - '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.html'
+      - '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.html'
     translation: '/src/main/resources/hudson/plugins/msbuild/**/%file_name%_%two_letters_code%.html'
+    "excluded_target_languages": [
+      "en"
+    ]
     escape_quotes: 0
     escape_special_characters: 0
 
