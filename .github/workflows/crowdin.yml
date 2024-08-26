@@ -24,6 +24,7 @@ jobs:
       - name: crowdin action
         uses: crowdin/github-action@v2
         with:
+          download_sources: false
           upload_translations: false
           download_translations: true
           skip_untranslated_files: true
