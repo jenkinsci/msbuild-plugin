@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>msbuild</artifactId>
-    <version>1.35</version>
+    <version>1.36-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <name>Jenkins MSBuild Plugin</name>
@@ -27,7 +27,7 @@
     <scm>
         <connection>scm:git:https://github.com/jenkinsci/msbuild-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/msbuild-plugin.git</developerConnection>
-        <tag>msbuild-1.35</tag>
+        <tag>${scmTag}</tag>
     </scm>
 
     <properties>
