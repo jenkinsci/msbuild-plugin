@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17 and Maven
-        uses: s4u/setup-maven-action@v1.16.0
+        uses: s4u/setup-maven-action@v1.17.0
         with:
           java-distribution: 'temurin'
           java-version: '21'
