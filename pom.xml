@@ -81,7 +81,7 @@
                 <plugin>
                     <groupId>org.jenkins-ci.tools</groupId>
                     <artifactId>maven-hpi-plugin</artifactId>
-                    <version>3.59</version>
+                    <version>3.61</version>
                 </plugin>
                 <plugin>
                     <groupId>org.openrewrite.maven</groupId>
