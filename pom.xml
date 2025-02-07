@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>msbuild</artifactId>
-    <version>1.36</version>
+    <version>1.37-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <name>Jenkins MSBuild Plugin</name>
