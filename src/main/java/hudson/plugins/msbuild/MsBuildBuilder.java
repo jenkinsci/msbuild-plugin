@@ -103,7 +103,7 @@ public class MsBuildBuilder extends Builder {
         CHARSET_CODE_MAP.put("IBM280", 20280);
         CHARSET_CODE_MAP.put("IBM284", 20284);
         CHARSET_CODE_MAP.put("IBM285", 20285);
-        CHARSET_CODE_MAP.put("IBM297", 20297);  
+        CHARSET_CODE_MAP.put("IBM297", 20297);
         CHARSET_CODE_MAP.put("IBM420", 20420);
         CHARSET_CODE_MAP.put("IBM424", 20424);
         CHARSET_CODE_MAP.put("IBM500", 500);
@@ -272,13 +272,13 @@ public class MsBuildBuilder extends Builder {
         normalizedArgs = Util.replaceMacro(normalizedArgs, env);
         normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
 
-        if (normalizedArgs.trim().length() > 0)
+        if (!normalizedArgs.trim().isEmpty())
             args.add(tokenizeArgs(normalizedArgs));
 
         // Build /P:key1=value1;key2=value2 ...
         Map<String, String> propertiesVariables = getPropertiesVariables(build);
         if (buildVariablesAsProperties && !propertiesVariables.isEmpty()) {
-            StringBuffer parameters = new StringBuffer();
+            StringBuilder parameters = new StringBuilder();
             parameters.append("/p:");
             for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
                 parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
@@ -290,7 +290,7 @@ public class MsBuildBuilder extends Builder {
         // If a msbuild file is specified, then add it as an argument, otherwise
         // msbuild will search for any file that ends in .proj or .sln
         String normalizedFile = null;
-        if (msBuildFile != null && msBuildFile.trim().length() != 0) {
+        if (msBuildFile != null && !msBuildFile.trim().isEmpty()) {
             normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
             normalizedFile = Util.replaceMacro(normalizedFile, env);
             normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
@@ -323,7 +323,7 @@ public class MsBuildBuilder extends Builder {
 
         try {
             listener.getLogger()
-                    .println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
+                    .printf("Executing the command %s from %s%n", args.toStringWithQuote(), pwd);
             // Parser to find the number of Warnings/Errors
             MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
             MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), build.getCharset());
@@ -335,7 +335,7 @@ public class MsBuildBuilder extends Builder {
                 build.setResult(Result.UNSTABLE);
             }
             // Return the result of the compilation
-            return continueOnBuildFailure ? true : (r == 0);
+            return continueOnBuildFailure || (r == 0);
         } catch (IOException e) {
             Util.displayIOException(e, listener);
             build.setResult(Result.FAILURE);
@@ -425,7 +425,6 @@ public class MsBuildBuilder extends Builder {
         }
 
         @Override
-        @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
         }

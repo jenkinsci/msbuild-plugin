@@ -7,6 +7,7 @@ import hudson.console.ConsoleAnnotator;
 import hudson.console.ConsoleNote;
 import org.jenkinsci.Symbol;
 
+import java.io.Serial;
 import java.util.regex.Pattern;
 
 /**
@@ -15,6 +16,7 @@ import java.util.regex.Pattern;
 public class MSBuildErrorNote extends ConsoleNote<Object> {
     /** Pattern to identify error messages */
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");

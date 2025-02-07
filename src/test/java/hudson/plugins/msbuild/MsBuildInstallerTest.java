@@ -6,7 +6,6 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
-import hudson.util.ListBoxModel;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -185,7 +184,7 @@ public class MsBuildInstallerTest {
         verifyNoMoreInteractions(vsConfigFilePath);
         assertFalse(result);
     }
-    
+
     @Test
     public void testUseConfigFileWithEmptyVsConfig() throws IOException, InterruptedException {
         boolean result = MsBuildInstaller.useConfigFile("", mockFilePath);
