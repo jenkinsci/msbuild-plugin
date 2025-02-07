@@ -10,6 +10,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Jonathan Zimmerman
@@ -63,7 +64,7 @@ public class MsBuildBuilderTest {
     @Test
     public void testValidCharset() {
         // Assuming CHARSET_CODE_MAP is populated with UTF-8 -> 65001
-        Charset charset = Charset.forName("UTF-8");
+        Charset charset = StandardCharsets.UTF_8;
         int expectedCodePage = 65001;
         int actualCodePage = MsBuildBuilder.getCodePageIdentifier(charset);
         assertEquals("Code page should match expected for UTF-8", expectedCodePage, actualCodePage);
@@ -87,7 +88,7 @@ public class MsBuildBuilderTest {
     @Test
     public void testCaseSensitivity() {
         // Verify case insensitivity by testing an all-lowercase input
-        Charset charset = Charset.forName("utf-8");
+        Charset charset = StandardCharsets.UTF_8;
         int expectedCodePage = 65001;
         int actualCodePage = MsBuildBuilder.getCodePageIdentifier(charset);
         assertEquals("Code page should match expected regardless of case", expectedCodePage, actualCodePage);

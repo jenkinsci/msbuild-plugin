@@ -4,6 +4,8 @@ import hudson.MarkupText;
 import hudson.console.ConsoleAnnotationDescriptor;
 import hudson.console.ConsoleAnnotator;
 import hudson.console.ConsoleNote;
+
+import java.io.Serial;
 import java.util.regex.Pattern;
 
 /**
@@ -12,10 +14,11 @@ import java.util.regex.Pattern;
 public class MSBuildWarningNote extends ConsoleNote<Object> {
     /** Pattern to identify warning messages */
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public final static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+(,\\d+){0,1}\\):\\s[Ww]arning\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
-    
+
     public MSBuildWarningNote() {
     }
 

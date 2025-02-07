@@ -38,8 +38,9 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
+import java.io.Serial;
 import java.util.Collections;
 import java.util.List;
 import java.io.IOException;
@@ -50,6 +51,7 @@ import java.io.IOException;
 public final class MsBuildInstallation extends ToolInstallation
         implements NodeSpecific<MsBuildInstallation>, EnvironmentSpecific<MsBuildInstallation> {
 
+    @Serial
     private static final long serialVersionUID = 1L;
     private final String defaultArgs;
 
@@ -111,7 +113,7 @@ public final class MsBuildInstallation extends ToolInstallation
         }
 
         @Override
-        public MsBuildInstallation newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public MsBuildInstallation newInstance(StaplerRequest2 req, JSONObject formData) throws FormException {
             return (MsBuildInstallation)super.newInstance(req, formData);
         }
     }
