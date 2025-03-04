@@ -6,22 +6,22 @@ import org.junit.jupiter.api.Test;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
-public class MsBuildConsoleParserTest {
+class MsBuildConsoleParserTest {
 
     private OutputStream mockOutputStream;
     private MsBuildConsoleParser parser;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mockOutputStream = mock(OutputStream.class);
         parser = new MsBuildConsoleParser(mockOutputStream, StandardCharsets.UTF_8);
     }
 
     @Test
-    public void testGetNumberOfWarnings() throws Exception {
+    void testGetNumberOfWarnings() throws Exception {
         String line = "    1 Warning(s)";
         parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
 
@@ -29,7 +29,7 @@ public class MsBuildConsoleParserTest {
     }
 
     @Test
-    public void testGetNumberOfErrors() throws Exception {
+    void testGetNumberOfErrors() throws Exception {
         String line = "    1 Error(s)";
         parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
 
@@ -37,7 +37,7 @@ public class MsBuildConsoleParserTest {
     }
 
     @Test
-    public void testGetNumberOfWarningsAndErrors() throws Exception {
+    void testGetNumberOfWarningsAndErrors() throws Exception {
         String line1 = "    3 Warning(s)";
         String line2 = "    5 Error(s)";
         parser.eol(line1.getBytes(StandardCharsets.UTF_8), line1.length());
@@ -48,7 +48,7 @@ public class MsBuildConsoleParserTest {
     }
 
     @Test
-    public void testInvalidWarningCount() throws Exception {
+    void testInvalidWarningCount() throws Exception {
         String line = "    Warnings: not a number";
         parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
 
@@ -56,7 +56,7 @@ public class MsBuildConsoleParserTest {
     }
 
     @Test
-    public void testInvalidErrorCount() throws Exception {
+    void testInvalidErrorCount() throws Exception {
         String line = "    Errors: not a number";
         parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
 
@@ -64,7 +64,7 @@ public class MsBuildConsoleParserTest {
     }
 
     @Test
-    public void testClose() throws Exception {
+    void testClose() throws Exception {
         parser.close();
         verify(mockOutputStream, times(1)).close();
     }

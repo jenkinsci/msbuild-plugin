@@ -4,12 +4,13 @@ import hudson.MarkupText;
 import org.junit.jupiter.api.Test;
 import java.util.regex.Matcher;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MsBuildWarningNoteTest {
+class MsBuildWarningNoteTest {
 
     @Test
-    public void testPatternMatchesWarningMessage() {
+    void testPatternMatchesWarningMessage() {
         String warningMessage = "SomeFile.cs(123,45): warning CS1234: Some warning message";
         Matcher matcher = MSBuildWarningNote.PATTERN.matcher(warningMessage);
         assertTrue(matcher.matches(), "Pattern should match the warning message format");
@@ -22,7 +23,7 @@ public class MsBuildWarningNoteTest {
     }
 
     @Test
-    public void testAnnotateAddsMarkup() {
+    void testAnnotateAddsMarkup() {
         String warningMessage = "SomeFile.cs(123,45): warning CS1234: Some warning message";
         MarkupText markupText = new MarkupText(warningMessage);
         MSBuildWarningNote note = new MSBuildWarningNote();
@@ -35,7 +36,7 @@ public class MsBuildWarningNoteTest {
     }
 
     @Test
-    public void testDescriptorDisplayName() {
+    void testDescriptorDisplayName() {
         MSBuildWarningNote.DescriptorImpl descriptor = new MSBuildWarningNote.DescriptorImpl();
         assertEquals("MSBuild warning", descriptor.getDisplayName(), "Display name should be 'MSBuild warning'");
     }

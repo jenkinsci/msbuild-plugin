@@ -23,65 +23,63 @@
  */
 package hudson.plugins.msbuild;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.util.ProcessKillingVeto.VetoCause;
 import hudson.util.ProcessTree.ProcessCallable;
 import hudson.util.ProcessTreeRemoting.IOSProcess;
+import org.junit.jupiter.api.BeforeEach;
 
-import java.io.IOException;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
 import com.google.common.collect.Lists;
 
-public class MsBuildKillingVetoTest {
+class MsBuildKillingVetoTest {
 
     private MsBuildKillingVeto testee;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         testee = new MsBuildKillingVeto();
     }
 
     @Test
-    public void testProcessIsNull() {
-        assertNull("Should return null if process is null", testee.vetoProcessKilling(null));
+    void testProcessIsNull() {
+        assertNull(testee.vetoProcessKilling(null), "Should return null if process is null");
     }
 
     @Test
-    public void testCommandLineIsEmpty() {
+    void testCommandLineIsEmpty() {
         IOSProcess emptyArgsProcess = mockProcess();
-        assertNull("Should return null if command line arguments are empty", testee.vetoProcessKilling(emptyArgsProcess));
+        assertNull(testee.vetoProcessKilling(emptyArgsProcess), "Should return null if command line arguments are empty");
     }
 
     @Test
-    public void testSparesMsPDBSrv() {
+    void testSparesMsPDBSrv() {
         VetoCause veto = testee.vetoProcessKilling(mockProcess("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin\\mspdbsrv.exe", "something", "else"));
         assertNotNull(veto);
         assertEquals("MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details", veto.getMessage());
     }
 
     @Test
-    public void testIgnoresCase() {
+    void testIgnoresCase() {
         VetoCause veto = testee.vetoProcessKilling(mockProcess("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin\\MsPdbSrv.exe", "something", "else"));
         assertNotNull(veto);
         assertEquals("MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details", veto.getMessage());
     }
 
     @Test
-    public void testPathDoesNotMatter() {
+    void testPathDoesNotMatter() {
         VetoCause veto = testee.vetoProcessKilling(mockProcess("D:/Tools/mspdbsrv.exe"));
         assertNotNull(veto);
         assertEquals("MSBuild Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details", veto.getMessage());
     }
 
     @Test
-    public void testLeavesOthersAlone() {
+    void testLeavesOthersAlone() {
         assertNull(testee.vetoProcessKilling(mockProcess("D:/Tools/somethingElse.exe")));
         assertNull(testee.vetoProcessKilling(mockProcess("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin\\cl.exe")));
         assertNull(testee.vetoProcessKilling(mockProcess("C:\\Program Files (x86)\\Microsoft Visual Studio\\bin\\link.exe")));
@@ -90,11 +88,11 @@ public class MsBuildKillingVetoTest {
     private IOSProcess mockProcess(final String... cmdLine) {
         return new IOSProcess() {
             @Override
-            public void killRecursively() throws InterruptedException {
+            public void killRecursively() {
             }
 
             @Override
-            public void kill() throws InterruptedException {
+            public void kill() {
             }
 
             @Override
@@ -107,18 +105,20 @@ public class MsBuildKillingVetoTest {
                 return null;
             }
 
+            @NonNull
             @Override
             public EnvVars getEnvironmentVariables() {
                 return null;
             }
 
+            @NonNull
             @Override
             public List<String> getArguments() {
                 return Lists.newArrayList(cmdLine);
             }
 
             @Override
-            public <T> T act(ProcessCallable<T> arg0) throws IOException, InterruptedException {
+            public <T> T act(ProcessCallable<T> arg0) {
                 return null;
             }
         };
