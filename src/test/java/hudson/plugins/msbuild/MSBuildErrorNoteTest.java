@@ -5,12 +5,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.regex.Matcher;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MSBuildErrorNoteTest {
+class MSBuildErrorNoteTest {
 
     @Test
-    public void testPatternMatchesErrorMessage() {
+    void testPatternMatchesErrorMessage() {
         String errorMessage = "SomeFile.cs(123,45): error CS1234: Some error message";
         Matcher matcher = MSBuildErrorNote.PATTERN.matcher(errorMessage);
         assertTrue(matcher.matches(), "Pattern should match the error message format");
@@ -22,7 +23,7 @@ public class MSBuildErrorNoteTest {
     }
 
     @Test
-    public void testAnnotateAddsMarkup() {
+    void testAnnotateAddsMarkup() {
         String errorMessage = "SomeFile.cs(123,45): error CS1234: Some error message";
         MarkupText markupText = new MarkupText(errorMessage);
         MSBuildErrorNote note = new MSBuildErrorNote();
@@ -35,7 +36,7 @@ public class MSBuildErrorNoteTest {
     }
 
     @Test
-    public void testDescriptorDisplayName() {
+    void testDescriptorDisplayName() {
         MSBuildErrorNote.DescriptorImpl descriptor = new MSBuildErrorNote.DescriptorImpl();
         assertEquals("MSBuild error", descriptor.getDisplayName(), "Display name should be 'MSBuild error'");
     }

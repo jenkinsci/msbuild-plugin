@@ -1,44 +1,32 @@
 package hudson.plugins.msbuild;
 
 import hudson.EnvVars;
-import hudson.model.Node;
-import hudson.model.TaskListener;
 import hudson.tools.ToolProperty;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(MockitoJUnitRunner.class)
-public class MsBuildInstallationTest {
-
-    @Mock
-    private Node node;
-
-    @Mock
-    private TaskListener taskListener;
+class MsBuildInstallationTest {
 
     private MsBuildInstallation msBuildInstallation;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         List<ToolProperty<?>> properties = Collections.emptyList();
         msBuildInstallation = new MsBuildInstallation("Test", "/path/to/msbuild", properties, "/p:Configuration=Release");
     }
 
     @Test
-    public void testGetDefaultArgs() {
+    void testGetDefaultArgs() {
         assertEquals("/p:Configuration=Release", msBuildInstallation.getDefaultArgs());
     }
 
     @Test
-    public void testBuildEnvVars() {
+    void testBuildEnvVars() {
         EnvVars envVars = new EnvVars();
         msBuildInstallation.buildEnvVars(envVars);
 
@@ -48,7 +36,7 @@ public class MsBuildInstallationTest {
     }
 
     @Test
-    public void testBuildEnvVarsWithNullDefaultArgs() {
+    void testBuildEnvVarsWithNullDefaultArgs() {
         List<ToolProperty<?>> properties = Collections.emptyList();
         MsBuildInstallation msBuildInstallationWithNullArgs = new MsBuildInstallation("Test", "/path/to/msbuild", properties, null);
         EnvVars envVars = new EnvVars();
@@ -60,7 +48,7 @@ public class MsBuildInstallationTest {
     }
 
     @Test
-    public void testForEnvironment() {
+    void testForEnvironment() {
         EnvVars environment = new EnvVars();
         environment.put("HOME", "/path/to/msbuild");
 
@@ -72,7 +60,7 @@ public class MsBuildInstallationTest {
     }
 
     @Test
-    public void testGetDisplayName() {
+    void testGetDisplayName() {
         MsBuildInstallation.DescriptorImpl descriptor = new MsBuildInstallation.DescriptorImpl();
         assertEquals("MSBuild", descriptor.getDisplayName());
     }

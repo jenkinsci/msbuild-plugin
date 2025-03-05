@@ -4,31 +4,29 @@ import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.Node;
-import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 
-@RunWith(MockitoJUnitRunner.class)
-public class MsBuildInstallerTest {
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class MsBuildInstallerTest {
 
     private MsBuildInstaller installer;
 
@@ -39,8 +37,6 @@ public class MsBuildInstallerTest {
     @Mock
     private EnvVars mockEnvVars;
     @Mock
-    private TaskListener mockTaskListener;
-    @Mock
     private FilePath mockFilePath;
     @Mock
     private FilePath mockConfigFilePath;
@@ -49,8 +45,8 @@ public class MsBuildInstallerTest {
     @Mock
     private VirtualChannel mockChannel;
 
-    @Before
-    public void setUp() throws IOException, InterruptedException {
+    @BeforeEach
+    void setUp() throws IOException, InterruptedException {
         installer = new MsBuildInstaller("testLabel");
         mockChannel = mock(VirtualChannel.class);
         when(mockNode.getChannel()).thenReturn(mockChannel);
@@ -63,14 +59,14 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testBuildToolsInstallPathWithGivenPath() {
+    void testBuildToolsInstallPathWithGivenPath() {
         String givenInstallPath = "D:\\Custom\\BuildTools";
         FilePath result = MsBuildInstaller.buildToolsInstallPath(mockNode, "2019", givenInstallPath);
         assertEquals(new FilePath(mockChannel, givenInstallPath), result);
     }
 
     @Test
-    public void testBuildToolsInstallPathWithoutGivenPath() {
+    void testBuildToolsInstallPathWithoutGivenPath() {
         String selectedVersion = "2019";
         FilePath result = MsBuildInstaller.buildToolsInstallPath(mockNode, selectedVersion, null);
         assertEquals(
@@ -80,14 +76,14 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testMsBuildBinPathWithGivenPath() {
+    void testMsBuildBinPathWithGivenPath() {
         String givenInstallPath = "D:\\Custom\\BuildTools";
         FilePath result = MsBuildInstaller.msBuildBinPath(mockNode, "2019", givenInstallPath);
         assertEquals(new FilePath(mockChannel, givenInstallPath).child("\\MSBuild\\Current\\Bin"), result);
     }
 
     @Test
-    public void testMsBuildBinPathWithoutGivenPath() {
+    void testMsBuildBinPathWithoutGivenPath() {
         String selectedVersion = "2019";
         FilePath result = MsBuildInstaller.msBuildBinPath(mockNode, selectedVersion, null);
         assertEquals(new FilePath(mockChannel,
@@ -96,14 +92,14 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testGetVs_BuildToolsExePath() {
+    void testGetVs_BuildToolsExePath() {
         FilePath expected = mockFilePath;
         FilePath result = MsBuildInstaller.getVs_BuildToolsExePath(expected);
         assertEquals(expected.child("vs_BuildTools.exe"), result);
     }
 
     @Test
-    public void testExtractInstallPath_WhenGivenArgumentsIsNull_ReturnsNull() {
+    void testExtractInstallPath_WhenGivenArgumentsIsNull_ReturnsNull() {
         String givenArguments = null;
 
         String result = MsBuildInstaller.extractInstallPath(givenArguments);
@@ -112,7 +108,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testExtractInstallPath_WhenGivenArgumentsDoesNotContainInstallPath_ReturnsNull() {
+    void testExtractInstallPath_WhenGivenArgumentsDoesNotContainInstallPath_ReturnsNull() {
         String givenArguments = "--quiet --norestart";
 
         String result = MsBuildInstaller.extractInstallPath(givenArguments);
@@ -121,7 +117,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testExtractInstallPath_WhenGivenArgumentsContainInstallPath_ReturnsInstallPathValue() {
+    void testExtractInstallPath_WhenGivenArgumentsContainInstallPath_ReturnsInstallPathValue() {
         String givenArguments = "--quiet --installPath \"C:\\Program Files\\MSBuild\"";
 
         String result = MsBuildInstaller.extractInstallPath(givenArguments);
@@ -130,7 +126,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testExtractInstallPath_WhenGivenArgumentsContainMultipleInstallPaths_ReturnsFirstInstallPathValue() {
+    void testExtractInstallPath_WhenGivenArgumentsContainMultipleInstallPaths_ReturnsFirstInstallPathValue() {
         String givenArguments = "--quiet --installPath \"C:\\Program Files\\MSBuild\" --installPath D:\\MSBuild";
 
         String result = MsBuildInstaller.extractInstallPath(givenArguments);
@@ -139,25 +135,25 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testSetAndGetSelectedVersion() {
+    void testSetAndGetSelectedVersion() {
         installer.setSelectedVersion("2022");
         assertEquals("2022", installer.getSelectedVersion());
     }
 
     @Test
-    public void testSetAndGetAdditionalArguments() {
+    void testSetAndGetAdditionalArguments() {
         installer.setAdditionalArguments("--quiet --norestart");
         assertEquals("--quiet --norestart", installer.getAdditionalArguments());
     }
 
     @Test
-    public void testSetAndGetVsconfig() {
+    void testSetAndGetVsconfig() {
         installer.setVsconfig("{ \"version\": \"16.0\" }");
         assertEquals("{ \"version\": \"16.0\" }", installer.getVsconfig());
     }
 
     @Test
-    public void testEnsureArguments() {
+    void testEnsureArguments() {
         String initialArgs = "--quiet";
         String[] argsToAdd = new String[] { "--wait", "--norestart" };
         String expected = "--quiet --wait --norestart";
@@ -165,7 +161,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testCheckIfOsIsWindows() throws IOException, InterruptedException {
+    void testCheckIfOsIsWindows() throws IOException, InterruptedException {
         when(mockNode.toComputer()).thenReturn(mockComputer);
         when(mockComputer.getEnvironment()).thenReturn(mockEnvVars);
         when(mockEnvVars.containsKey("OS")).thenReturn(true);
@@ -178,7 +174,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testUseConfigFileWithNullVsConfig() throws IOException, InterruptedException {
+    void testUseConfigFileWithNullVsConfig() throws IOException, InterruptedException {
         boolean result = MsBuildInstaller.useConfigFile(null, mockFilePath);
         verify(vsConfigFilePath, times(1)).delete();
         verifyNoMoreInteractions(vsConfigFilePath);
@@ -186,7 +182,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testUseConfigFileWithEmptyVsConfig() throws IOException, InterruptedException {
+    void testUseConfigFileWithEmptyVsConfig() throws IOException, InterruptedException {
         boolean result = MsBuildInstaller.useConfigFile("", mockFilePath);
         verify(vsConfigFilePath, times(1)).delete();
         verifyNoMoreInteractions(vsConfigFilePath);
@@ -194,7 +190,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testUseConfigFileNonExistingFile() throws IOException, InterruptedException {
+    void testUseConfigFileNonExistingFile() throws IOException, InterruptedException {
         when(vsConfigFilePath.exists()).thenReturn(false);
 
         boolean result = MsBuildInstaller.useConfigFile("some config", mockFilePath);
@@ -204,7 +200,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testUseConfigFileExistingFileDifferentContent() throws IOException, InterruptedException {
+    void testUseConfigFileExistingFileDifferentContent() throws IOException, InterruptedException {
         when(vsConfigFilePath.exists()).thenReturn(true);
         when(vsConfigFilePath.readToString()).thenReturn("old config");
 
@@ -215,17 +211,17 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testNeedsModify() throws Exception {
+    void testNeedsModify() throws Exception {
         when(mockConfigFilePath.exists()).thenReturn(true);
         when(mockConfigFilePath.readToString()).thenReturn("{\"needsModify\":true}");
 
         boolean result = MsBuildInstaller.needsModify(mockFilePath);
 
-        assertTrue("The method should return true as the 'needsModify' key is set to true", result);
+        assertTrue(result, "The method should return true as the 'needsModify' key is set to true");
     }
 
     @Test
-    public void testNeedsUpdate_WhenLastUpdatedWithin24Hours_ReturnsFalse() throws IOException, InterruptedException {
+    void testNeedsUpdate_WhenLastUpdatedWithin24Hours_ReturnsFalse() throws IOException, InterruptedException {
         when(mockFilePath.child("config.json")).thenReturn(mockFilePath);
         when(mockFilePath.exists()).thenReturn(true);
         long currentTimestamp = System.currentTimeMillis() / 1000;
@@ -233,22 +229,22 @@ public class MsBuildInstallerTest {
 
         boolean result = MsBuildInstaller.needsUpdate(mockFilePath);
 
-        assertFalse("The method should return false as the lastUpdated time is within 24 hours", result);
+        assertFalse(result, "The method should return false as the lastUpdated time is within 24 hours");
     }
 
     @Test
-    public void testNeedsUpdate_WhenLastUpdatedMoreThan24Hours_ReturnsTrue() throws IOException, InterruptedException {
+    void testNeedsUpdate_WhenLastUpdatedMoreThan24Hours_ReturnsTrue() throws IOException, InterruptedException {
         when(mockFilePath.child("config.json")).thenReturn(mockFilePath);
         when(mockFilePath.exists()).thenReturn(true);
         when(mockFilePath.readToString()).thenReturn("{\"lastUpdated\":1619300929}");
 
         boolean result = MsBuildInstaller.needsUpdate(mockFilePath);
 
-        assertTrue("The method should return true as the lastUpdated time is more than 24 hours", result);
+        assertTrue(result, "The method should return true as the lastUpdated time is more than 24 hours");
     }
 
     @Test
-    public void testDownloadFile_SuccessfulDownload() throws Exception {
+    void testDownloadFile_SuccessfulDownload() throws Exception {
         URI mockURI = new URI("https://aka.ms/vs/17/release/vs_buildtools.exe");
         when(mockFilePath.write()).thenReturn(mock(OutputStream.class)); // Mocking OutputStream correctly
 
@@ -257,7 +253,7 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testGetUrlForVersion() {
+    void testGetUrlForVersion() {
         assertEquals("https://aka.ms/vs/17/release/vs_buildtools.exe",
                 MsBuildInstaller.DescriptorImpl.getUrlForVersion("2022"));
         assertEquals("https://aka.ms/vs/16/release/vs_buildtools.exe",
@@ -265,14 +261,14 @@ public class MsBuildInstallerTest {
     }
 
     @Test
-    public void testGetDisplayName() {
+    void testGetDisplayName() {
         MsBuildInstaller.DescriptorImpl descriptor = new MsBuildInstaller.DescriptorImpl();
         String displayName = descriptor.getDisplayName();
         assertEquals("Install from Microsoft", displayName);
     }
 
     @Test
-    public void testIsApplicableWithCorrectType() {
+    void testIsApplicableWithCorrectType() {
         MsBuildInstaller.DescriptorImpl descriptor = new MsBuildInstaller.DescriptorImpl();
         assertTrue(descriptor.isApplicable(MsBuildInstallation.class));
     }
