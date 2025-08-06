@@ -33,8 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -500,7 +498,7 @@ public class MsBuildInstaller extends ToolInstaller {
     public static String ensureArguments(String givenArguments, String[] argsToAdd) {
         StringBuilder sb = new StringBuilder(givenArguments);
         for (String arg : argsToAdd) {
-            if (!StringUtils.contains(givenArguments, arg)) {
+            if (!givenArguments.contains(arg)) {
                 sb.append(" ").append(arg);
             }
         }
