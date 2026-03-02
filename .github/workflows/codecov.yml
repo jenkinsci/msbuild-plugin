@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Coverage on Ubuntu
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up JDK 17 and Maven
         uses: s4u/setup-maven-action@v1.19.0
         with:
