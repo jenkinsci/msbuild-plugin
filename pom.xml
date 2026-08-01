@@ -90,7 +90,7 @@
                 <plugin>
                     <groupId>org.openrewrite.maven</groupId>
                     <artifactId>rewrite-maven-plugin</artifactId>
-                    <version>6.43.0</version>
+                    <version>6.44.0</version>
                     <configuration>
                         <activeRecipes>
                             <recipe>org.openrewrite.jenkins.github.AddTeamToCodeowners</recipe>
@@ -100,7 +100,7 @@
                         <dependency>
                             <groupId>org.openrewrite.recipe</groupId>
                             <artifactId>rewrite-jenkins</artifactId>
-                            <version>0.36.2</version>
+                            <version>0.36.3</version>
                         </dependency>
                     </dependencies>
                 </plugin>
