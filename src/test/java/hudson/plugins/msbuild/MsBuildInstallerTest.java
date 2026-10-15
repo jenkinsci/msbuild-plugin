@@ -161,6 +161,21 @@ class MsBuildInstallerTest {
     }
 
     @Test
+    void testEnsureArgumentsInitialNull() {
+        String[] argsToAdd = new String[] { "--quiet --wait", "--norestart" };
+        String expected = "--quiet --wait --norestart";
+        assertEquals(expected, MsBuildInstaller.ensureArguments(null, argsToAdd));
+    }
+
+    @Test
+    void testEnsureArgumentsAlreadyPresent() {
+        String initialArgs = "--quiet --norestart";
+        String[] argsToAdd = new String[] { "--quiet", "--wait", "--norestart" };
+        String expected = "--quiet --norestart --wait";
+        assertEquals(expected, MsBuildInstaller.ensureArguments(initialArgs, argsToAdd));
+    }
+
+    @Test
     void testCheckIfOsIsWindows() throws IOException, InterruptedException {
         when(mockNode.toComputer()).thenReturn(mockComputer);
         when(mockComputer.getEnvironment()).thenReturn(mockEnvVars);

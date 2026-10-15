@@ -496,13 +496,18 @@ public class MsBuildInstaller extends ToolInstaller {
      * @return the modified argument string with all specified arguments included
      */
     public static String ensureArguments(String givenArguments, String[] argsToAdd) {
-        StringBuilder sb = new StringBuilder(givenArguments);
+        List<String> args = new ArrayList<>();
+        if (givenArguments != null) {
+            args.add(givenArguments);
+        }
+
         for (String arg : argsToAdd) {
-            if (!givenArguments.contains(arg)) {
-                sb.append(" ").append(arg);
+            if (givenArguments == null || !givenArguments.contains(arg)) {
+                args.add(arg);
             }
         }
-        return sb.toString();
+
+        return String.join(" ", args);
     }
 
     @Extension
