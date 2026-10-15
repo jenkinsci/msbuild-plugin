@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -158,6 +159,13 @@ class MsBuildInstallerTest {
         String[] argsToAdd = new String[] { "--wait", "--norestart" };
         String expected = "--quiet --wait --norestart";
         assertEquals(expected, MsBuildInstaller.ensureArguments(initialArgs, argsToAdd));
+    }
+
+    @Test
+    void testEnsureArgumentsInitialNull() {
+        String[] argsToAdd = new String[] { "--quiet --wait", "--norestart" };
+        String expected = "--quiet --wait --norestart";
+        assertEquals(expected, MsBuildInstaller.ensureArguments(null, argsToAdd));
     }
 
     @Test
