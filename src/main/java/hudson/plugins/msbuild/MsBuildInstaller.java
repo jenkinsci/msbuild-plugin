@@ -476,15 +476,16 @@ public class MsBuildInstaller extends ToolInstaller {
      */
     public static void downloadFile(URI uri, FilePath targetPath)
             throws IOException, InterruptedException {
-        HttpClient client = ProxyConfiguration.newHttpClient();
         HttpRequest request = ProxyConfiguration.newHttpRequestBuilder(uri).GET().build();
-        HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
-        try (InputStream in = response.body()) {
-            if (response.statusCode() != 200) {
-                throw new IOException("Failed to download " + uri + ": HTTP " + response.statusCode());
-            }
-            try (OutputStream out = targetPath.write()) {
-                in.transferTo(out);
+        try (HttpClient client = ProxyConfiguration.newHttpClient()) {
+            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            try (InputStream in = response.body()) {
+                if (response.statusCode() != 200) {
+                    throw new IOException("Failed to download " + uri + ": HTTP " + response.statusCode());
+                }
+                try (OutputStream out = targetPath.write()) {
+                    in.transferTo(out);
+                }
             }
         }
     }

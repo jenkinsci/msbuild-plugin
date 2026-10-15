@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,8 +56,7 @@ class MsBuildInstallerProxyTest {
     }
 
     @AfterEach
-    void stopFakeProxyAndResetJenkins() {
-        jenkins.jenkins.proxy = null;
+    void stopFakeProxy() {
         fakeProxy.stop(0);
     }
 
@@ -82,6 +82,6 @@ class MsBuildInstallerProxyTest {
                 () -> MsBuildInstaller.downloadFile(UNRESOLVABLE_URI, new FilePath(target)));
 
         assertTrue(e.getMessage().contains("404"), "the message should contain the HTTP status: " + e.getMessage());
-        assertTrue(!target.exists(), "an error page must not be written as installer");
+        assertFalse(target.exists(), "an error page must not be written as installer");
     }
 }
