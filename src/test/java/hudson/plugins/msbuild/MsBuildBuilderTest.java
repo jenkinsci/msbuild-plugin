@@ -4,6 +4,7 @@ import hudson.Launcher;
 import hudson.console.ConsoleNote;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
@@ -123,6 +124,13 @@ class MsBuildBuilderTest {
     void toolFullPathAppendsExeForDirectory(@TempDir Path dir) throws Exception {
         Launcher launcher = new Launcher.LocalLauncher(null);
         assertEquals(dir + "\\msbuild.exe", MsBuildBuilder.getToolFullPath(launcher, dir.toString(), "msbuild.exe"));
+    }
+
+    @Test
+    void toolFullPathKeepsTrailingBackslashOfDirectory(@TempDir Path dir) throws Exception {
+        String vs = Files.createDirectory(dir.resolve("vs")) + "\\";
+        assertEquals(vs + "msbuild.exe",
+                MsBuildBuilder.getToolFullPath(new Launcher.LocalLauncher(null), vs, "msbuild.exe"));
     }
 
     @Test
@@ -254,6 +262,46 @@ class MsBuildBuilderTest {
 
     @Test
     @WithJenkins
+    void noInstallationNameIgnoresConfiguredOnes(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(), null));
+
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, false, true));
+
+        assertEquals(windows("\"msbuild.exe", "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void failsWhenNodeIsGone(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(), null));
+        MsBuildBuilder builder = new MsBuildBuilder("VS", null, "", false, false, false, true);
+        FreeStyleProject p = r.createFreeStyleProject();
+        RecordingLauncher[] launcher = new RecordingLauncher[1];
+        p.getBuildersList().add(new TestBuilder() {
+            @Override
+            public boolean perform(AbstractBuild<?, ?> build, Launcher l, BuildListener listener)
+                    throws InterruptedException, IOException {
+                launcher[0] = new RecordingLauncher(listener);
+                // static mocks are per thread, so this has to happen on the executor
+                Computer gone = org.mockito.Mockito.spy(Computer.currentComputer());
+                org.mockito.Mockito.doReturn(null).when(gone).getNode();
+                try (var computer = org.mockito.Mockito.mockStatic(Computer.class)) {
+                    computer.when(Computer::currentComputer).thenReturn(gone);
+                    return builder.perform(build, launcher[0], listener);
+                }
+            }
+        });
+
+        FreeStyleBuild build = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+
+        r.assertLogContains("The node of this build is no longer available", build);
+        assertTrue(launcher[0].commands.isEmpty());
+    }
+
+    @Test
+    @WithJenkins
     void selectsInstallationByName(JenkinsRule r, @TempDir Path dir) throws Exception {
         Path first = Files.createFile(dir.resolve("first.exe"));
         Path second = Files.createFile(dir.resolve("second.exe"));
@@ -311,6 +359,7 @@ class MsBuildBuilderTest {
         assertEquals("\"a b\\\\\\\\\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\"a b\\\\\""));
         assertEquals("\"a b\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\"a b\""));
         assertEquals("C:\\out\\", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("C:\\out\\"));
+        assertEquals("\\\\\\\\\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\\\\\""), "only backslashes");
     }
 
     @Test

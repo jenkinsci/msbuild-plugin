@@ -137,6 +137,7 @@ class MsBuildInstallerTest {
         assertTrue(MsBuildInstaller.checkIfOsIsWindows(node(new EnvVars("OS", "Windows_NT"))));
         assertFalse(MsBuildInstaller.checkIfOsIsWindows(node(new EnvVars("OS", "Linux"))));
         assertFalse(MsBuildInstaller.checkIfOsIsWindows(node(new EnvVars())));
+        assertFalse(MsBuildInstaller.checkIfOsIsWindows(node(null)), "no environment");
         assertFalse(MsBuildInstaller.checkIfOsIsWindows(mock(Node.class)), "offline node has no computer");
     }
 

@@ -245,33 +245,36 @@ public class MsBuildBuilder extends Builder {
         } else {
             EnvVars env = build.getEnvironment(listener);
             Node node = Computer.currentComputer().getNode();
-            if (node != null) {
-                ai = ai.forNode(node, listener);
-                ai = ai.forEnvironment(env);
-                String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
-                FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
+            if (node == null) {
+                // without it the command would run without msbuild.exe
+                listener.fatalError("The node of this build is no longer available");
+                return false;
+            }
+            ai = ai.forNode(node, listener);
+            ai = ai.forEnvironment(env);
+            String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
+            FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
 
-                try {
-                    if (!exec.exists()) {
-                        listener.fatalError(pathToMsBuild + " doesn't exist");
-                        return false;
-                    }
-                } catch (IOException e) {
-                    listener.fatalError("Failed checking for existence of " + pathToMsBuild);
+            try {
+                if (!exec.exists()) {
+                    listener.fatalError(pathToMsBuild + " doesn't exist");
                     return false;
                 }
+            } catch (IOException e) {
+                listener.fatalError("Failed checking for existence of " + pathToMsBuild);
+                return false;
+            }
 
-                listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
-                args.add(pathToMsBuild);
+            listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
+            args.add(pathToMsBuild);
 
-                if (ai.getDefaultArgs() != null) {
-                    args.add(tokenizeArgs(ai.getDefaultArgs()));
-                }
+            if (ai.getDefaultArgs() != null) {
+                args.add(tokenizeArgs(ai.getDefaultArgs()));
             }
         }
 
         EnvVars env = build.getEnvironment(listener);
-        Set<String> secrets = getSensitiveVariables(build);
+        Set<String> secrets = build.getSensitiveBuildVariables();
         // split before expanding, so a variable value with spaces cannot add switches like -logger: of its own
         for (String template : tokenizeArgs(cmdLineArgs.replaceAll("[\t\r\n]+", " "))) {
             String arg = expand(template, env, build);
@@ -398,11 +401,6 @@ public class MsBuildBuilder extends Builder {
                 .add(String.join(" ", list.subList(2, list.size())), masked);
     }
 
-    private static Set<String> getSensitiveVariables(AbstractBuild<?, ?> build) {
-        Set<String> names = build.getSensitiveBuildVariables();
-        return names == null ? Set.of() : names;
-    }
-
     /**
      * Whether {@code template} uses one of {@code names} as {@code $NAME} or {@code ${NAME}}. Masking by the
      * template instead of by the value keeps a short secret like "1" from masking every argument containing a 1.
@@ -421,7 +419,7 @@ public class MsBuildBuilder extends Builder {
         Map<String, String> buildVariables = build.getBuildVariables();
 
         final Set<String> sensitiveBuildVariables = build.getSensitiveBuildVariables();
-        if (sensitiveBuildVariables == null || sensitiveBuildVariables.isEmpty()) {
+        if (sensitiveBuildVariables.isEmpty()) {
             return buildVariables;
         }
 
