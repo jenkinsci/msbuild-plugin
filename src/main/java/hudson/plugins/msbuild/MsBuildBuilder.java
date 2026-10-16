@@ -35,8 +35,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -71,9 +73,6 @@ public class MsBuildBuilder extends Builder {
         CHARSET_CODE_MAP.put("ISO-8859-15", 28605);
         CHARSET_CODE_MAP.put("KOI8-R", 20866);
         CHARSET_CODE_MAP.put("KOI8-U", 21866);
-        CHARSET_CODE_MAP.put("UTF-16", 1200);
-        CHARSET_CODE_MAP.put("UTF-32", 12000);
-        CHARSET_CODE_MAP.put("UTF-32BE", 12001);
         CHARSET_CODE_MAP.put("WINDOWS-1250", 1250);
         CHARSET_CODE_MAP.put("WINDOWS-1251", 1251);
         CHARSET_CODE_MAP.put("WINDOWS-1252", 1252);
@@ -232,6 +231,10 @@ public class MsBuildBuilder extends Builder {
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException, IOException {
+        if (launcher.isUnix()) {
+            listener.fatalError("Unable to use this plugin on this kind of operating system");
+            return false;
+        }
         ArgumentListBuilder args = new ArgumentListBuilder();
         String execName = "msbuild.exe";
         MsBuildInstallation ai = getMsBuild();
@@ -242,38 +245,38 @@ public class MsBuildBuilder extends Builder {
         } else {
             EnvVars env = build.getEnvironment(listener);
             Node node = Computer.currentComputer().getNode();
-            if (node != null) {
-                ai = ai.forNode(node, listener);
-                ai = ai.forEnvironment(env);
-                String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
-                FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
+            if (node == null) {
+                // without it the command would run without msbuild.exe
+                listener.fatalError("The node of this build is no longer available");
+                return false;
+            }
+            ai = ai.forNode(node, listener);
+            ai = ai.forEnvironment(env);
+            String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
+            FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
 
-                try {
-                    if (!exec.exists()) {
-                        listener.fatalError(pathToMsBuild + " doesn't exist");
-                        return false;
-                    }
-                } catch (IOException e) {
-                    listener.fatalError("Failed checking for existence of " + pathToMsBuild);
-                    return false;
-                }
+            if (!exec.exists()) {
+                listener.fatalError(pathToMsBuild + " doesn't exist");
+                return false;
+            }
 
-                listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
-                args.add(pathToMsBuild);
+            listener.getLogger().println("Path To MSBuild.exe: " + pathToMsBuild);
+            args.add(pathToMsBuild);
 
-                if (ai.getDefaultArgs() != null) {
-                    args.add(tokenizeArgs(ai.getDefaultArgs()));
-                }
+            if (ai.getDefaultArgs() != null) {
+                args.add(tokenizeArgs(ai.getDefaultArgs()));
             }
         }
 
         EnvVars env = build.getEnvironment(listener);
-        String normalizedArgs = cmdLineArgs.replaceAll("[\t\r\n]+", " ");
-        normalizedArgs = Util.replaceMacro(normalizedArgs, env);
-        normalizedArgs = Util.replaceMacro(normalizedArgs, build.getBuildVariables());
-
-        if (!normalizedArgs.trim().isEmpty())
-            args.add(tokenizeArgs(normalizedArgs));
+        Set<String> secrets = build.getSensitiveBuildVariables();
+        // split before expanding, so a variable value with spaces cannot add switches like -logger: of its own
+        for (String template : tokenizeArgs(cmdLineArgs.replaceAll("[\t\r\n]+", " "))) {
+            String arg = expand(template, env, build);
+            if (!arg.isEmpty()) {
+                args.add(arg, referencesAny(template, secrets));
+            }
+        }
 
         // Build /P:key1=value1;key2=value2 ...
         Map<String, String> propertiesVariables = getPropertiesVariables(build);
@@ -281,7 +284,8 @@ public class MsBuildBuilder extends Builder {
             StringBuilder parameters = new StringBuilder();
             parameters.append("/p:");
             for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
-                parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+                parameters.append(entry.getKey()).append("=")
+                        .append(String.valueOf(entry.getValue()).replaceAll("[\r\n]+", " ")).append(";");
             }
             parameters.delete(parameters.length() - 1, parameters.length());
             args.add(parameters.toString());
@@ -290,12 +294,19 @@ public class MsBuildBuilder extends Builder {
         // If a msbuild file is specified, then add it as an argument, otherwise
         // msbuild will search for any file that ends in .proj or .sln
         String normalizedFile = null;
+        boolean maskFile = false;
         if (msBuildFile != null && !msBuildFile.trim().isEmpty()) {
-            normalizedFile = msBuildFile.replaceAll("[\t\r\n]+", " ");
-            normalizedFile = Util.replaceMacro(normalizedFile, env);
-            normalizedFile = Util.replaceMacro(normalizedFile, build.getBuildVariables());
-            if (!normalizedFile.isEmpty()) {
-                args.add(normalizedFile);
+            String template = msBuildFile.replaceAll("[\t\r\n]+", " ");
+            normalizedFile = expand(template, env, build).trim();
+            maskFile = referencesAny(template, secrets);
+            // the file was passed through unquoted before, so users may have quoted it themselves
+            if (normalizedFile.length() > 1 && normalizedFile.startsWith("\"") && normalizedFile.endsWith("\"")) {
+                normalizedFile = normalizedFile.substring(1, normalizedFile.length() - 1);
+            }
+            if (normalizedFile.isEmpty()) {
+                normalizedFile = null;
+            } else {
+                args.add(normalizedFile, maskFile);
             }
         }
 
@@ -307,30 +318,22 @@ public class MsBuildBuilder extends Builder {
             }
         }
 
-        if (!launcher.isUnix()) {
-            if (!doNotUseChcpCommand) {
-                final int cpi = getCodePageIdentifier(build.getCharset());
-                if (cpi != 0) {
-                    args.prepend("chcp", String.valueOf(cpi), "&");
-                }
-            }
-
-            args.prepend("cmd.exe", "/C", "\"");
-            args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
-        } else {
-            listener.fatalError("Unable to use this plugin on this kind of operation system");
-        }
+        int cpi = doNotUseChcpCommand ? 0 : getCodePageIdentifier(build.getCharset());
+        args = toWindowsCommand(args, cpi);
 
         try {
             listener.getLogger()
-                    .printf("Executing the command %s from %s%n", args.toStringWithQuote(), pwd);
-            // Parser to find the number of Warnings/Errors
-            MsBuildConsoleParser mbcp = new MsBuildConsoleParser(listener.getLogger(), build.getCharset());
+                    .printf("Executing the command %s from %s%n", args, pwd);
+            // Annotate errors/warnings, and count them for the summary
             MSBuildConsoleAnnotator annotator = new MSBuildConsoleAnnotator(listener.getLogger(), build.getCharset());
+            MsBuildConsoleParser mbcp = new MsBuildConsoleParser(annotator, build.getCharset());
             // Launch the msbuild.exe
-            int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).stdout(annotator).pwd(pwd).join();
-            // Check the number of warnings
-            if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
+            int r = launcher.launch().cmds(singleArgument(args)).envs(env).stdout(mbcp).pwd(pwd).join();
+            // a last line without newline is still buffered; close() would close the build log
+            mbcp.forceEol();
+            annotator.forceEol();
+            // The summary is missing with /clp:NoSummary or a localized MSBuild, so count warning lines too
+            if (unstableIfWarnings && (mbcp.getNumberOfWarnings() > 0 || annotator.getNumberOfWarnings() > 0)) {
                 listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
                 build.setResult(Result.UNSTABLE);
             }
@@ -343,12 +346,75 @@ public class MsBuildBuilder extends Builder {
         }
     }
 
+    /**
+     * Wraps the command in {@code cmd.exe /C}, quoting cmd.exe metacharacters and {@code %VAR%} in every argument,
+     * so build variable values cannot inject commands. Only the {@code &} after {@code chcp} stays unquoted.
+     */
+    static ArgumentListBuilder toWindowsCommand(ArgumentListBuilder args, int codePage) {
+        if (codePage != 0) {
+            args.prepend("chcp", String.valueOf(codePage), "&");
+        }
+        ArgumentListBuilder quoted = args.toWindowsCommand(true);
+        List<String> list = quoted.toList();
+        boolean[] mask = quoted.toMaskArray();
+        ArgumentListBuilder result = new ArgumentListBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            // [cmd.exe, /C, "chcp, <codePage>, "&", ...]
+            String arg = codePage != 0 && i == 4 ? "&" : list.get(i);
+            result.add(doubleBackslashesBeforeClosingQuote(arg), mask[i]);
+        }
+        return result;
+    }
+
+    /**
+     * {@code "C:\a b\"} would end with an escaped quote for msbuild.exe; backslashes before a closing quote
+     * have to be doubled (MSVC command line rules).
+     */
+    static String doubleBackslashesBeforeClosingQuote(String arg) {
+        if (arg.length() < 3 || !arg.endsWith("\\\"")) {
+            return arg;
+        }
+        int end = arg.length() - 1;
+        int start = end;
+        while (start > 0 && arg.charAt(start - 1) == '\\') {
+            start--;
+        }
+        return arg.substring(0, end) + arg.substring(start, end) + "\"";
+    }
+
+    /**
+     * Passes everything after {@code /C} as one argument. As a separate argument, Java quotes a quoted argument
+     * ending in {@code \"} again, which breaks it.
+     */
+    static ArgumentListBuilder singleArgument(ArgumentListBuilder windowsCommand) {
+        List<String> list = windowsCommand.toList();
+        boolean masked = false;
+        for (boolean m : windowsCommand.toMaskArray()) {
+            masked |= m;
+        }
+        return new ArgumentListBuilder(list.get(0), list.get(1))
+                .add(String.join(" ", list.subList(2, list.size())), masked);
+    }
+
+    /**
+     * Whether {@code template} uses one of {@code names} as {@code $NAME} or {@code ${NAME}}. Masking by the
+     * template instead of by the value keeps a short secret like "1" from masking every argument containing a 1.
+     */
+    static boolean referencesAny(String template, Set<String> names) {
+        boolean[] found = {false};
+        Util.replaceMacro(template, name -> {
+            found[0] |= names.contains(name);
+            return null;
+        });
+        return found[0];
+    }
+
     private Map<String, String> getPropertiesVariables(AbstractBuild<?, ?> build) {
 
         Map<String, String> buildVariables = build.getBuildVariables();
 
         final Set<String> sensitiveBuildVariables = build.getSensitiveBuildVariables();
-        if (sensitiveBuildVariables == null || sensitiveBuildVariables.isEmpty()) {
+        if (sensitiveBuildVariables.isEmpty()) {
             return buildVariables;
         }
 
@@ -385,26 +451,60 @@ public class MsBuildBuilder extends Builder {
     }
 
     /**
-     * Tokenize a set of arguments, preserving quotes.
-     *
-     * @param args
-     * @return
+     * Splits on whitespace outside double quotes and removes the quotes, like the Windows command line.
+     * Backslashes are literal, so paths like {@code bin\} or {@code \\server\share} keep them, except before a
+     * quote: {@code \"} is a literal quote and {@code \\"} a backslash followed by a quote that opens or closes.
      */
-
     @NonNull
     static String[] tokenizeArgs(String args) {
-
+        List<String> tokens = new ArrayList<>();
         if (args == null) {
-            return new String[] {};
+            return new String[0];
         }
-
-        final String[] tokenize = Util.tokenize(args);
-
-        if (args.endsWith("\\")) {
-            tokenize[tokenize.length - 1] = tokenize[tokenize.length - 1] + "\\";
+        StringBuilder token = new StringBuilder();
+        boolean quoted = false;
+        boolean inToken = false;
+        for (int i = 0; i < args.length(); i++) {
+            char c = args.charAt(i);
+            if (c == '\\') {
+                int end = i;
+                while (end < args.length() && args.charAt(end) == '\\') {
+                    end++;
+                }
+                int backslashes = end - i;
+                boolean beforeQuote = end < args.length() && args.charAt(end) == '"';
+                token.append("\\".repeat(beforeQuote ? backslashes / 2 : backslashes));
+                if (beforeQuote && backslashes % 2 != 0) {
+                    token.append('"');
+                    end++;
+                }
+                inToken = true;
+                // the loop's i++ moves to the quote that opens or closes, or past the run
+                i = end - 1;
+            } else if (c == '"') {
+                quoted = !quoted;
+                inToken = true;
+            } else if (Character.isWhitespace(c) && !quoted) {
+                if (inToken) {
+                    tokens.add(token.toString());
+                    token.setLength(0);
+                    inToken = false;
+                }
+            } else {
+                token.append(c);
+                inToken = true;
+            }
         }
+        if (inToken) {
+            tokens.add(token.toString());
+        }
+        return tokens.toArray(new String[0]);
+    }
 
-        return tokenize;
+    /** Expands environment and build variables; a line break would end the cmd.exe command line. */
+    private static String expand(String template, EnvVars env, AbstractBuild<?, ?> build) {
+        String expanded = Util.replaceMacro(Util.replaceMacro(template, env), build.getBuildVariables());
+        return expanded.replaceAll("[\r\n]+", " ");
     }
 
     @Extension

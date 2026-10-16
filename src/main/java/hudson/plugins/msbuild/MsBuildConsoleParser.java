@@ -38,6 +38,9 @@ import java.util.regex.Pattern;
  * @author Damien Finck
  */
 public class MsBuildConsoleParser extends LineTransformationOutputStream {
+    private static final Pattern WARNINGS = Pattern.compile("(\\d+)\\sWarning\\(s\\)");
+    private static final Pattern ERRORS = Pattern.compile("(\\d+)\\sError\\(s\\)");
+
     private final OutputStream out;
     private final Charset charset;
 
@@ -64,30 +67,25 @@ public class MsBuildConsoleParser extends LineTransformationOutputStream {
         // trim off CR/LF from the end
         line = trimEOL(line);
 
-        Pattern patternWarnings = Pattern.compile(".*\\d+\\sWarning\\(s\\).*");
-        Pattern patternErrors = Pattern.compile(".*\\d+\\sError\\(s\\).*");
+        Matcher mWarnings = WARNINGS.matcher(line);
+        Matcher mErrors = ERRORS.matcher(line);
 
-        Matcher mWarnings = patternWarnings.matcher(line);
-        Matcher mErrors = patternErrors.matcher(line);
-
-        if (mWarnings.matches()) { // Match the number of warnings
-            String[] part = line.split(" ");
-            try {
-                numberOfWarnings = Integer.parseInt(part[4]);
-            } catch (NumberFormatException e) {
-
-            }
-        } else if (mErrors.matches()) { // Match the number of errors
-            String[] part = line.split(" ");
-            try {
-                numberOfErrors = Integer.parseInt(part[4]);
-            } catch (NumberFormatException e) {
-
-            }
+        if (mWarnings.find()) { // Match the number of warnings
+            numberOfWarnings = parseCount(mWarnings.group(1), numberOfWarnings);
+        } else if (mErrors.find()) { // Match the number of errors
+            numberOfErrors = parseCount(mErrors.group(1), numberOfErrors);
         }
 
         // Write to output
         out.write(b, 0, len);
+    }
+
+    private static int parseCount(String digits, int fallback) {
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException e) { // more digits than an int holds
+            return fallback;
+        }
     }
 
     @Override
