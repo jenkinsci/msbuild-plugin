@@ -4,6 +4,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.ProxyConfiguration;
 import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -27,8 +28,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -474,14 +476,16 @@ public class MsBuildInstaller extends ToolInstaller {
      */
     public static void downloadFile(URI uri, FilePath targetPath)
             throws IOException, InterruptedException {
-        URL url = uri.toURL();
-        URLConnection connection = url.openConnection();
-        try (InputStream in = connection.getInputStream();
-                OutputStream out = targetPath.write()) {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
+        HttpRequest request = ProxyConfiguration.newHttpRequestBuilder(uri).GET().build();
+        try (HttpClient client = ProxyConfiguration.newHttpClient()) {
+            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            try (InputStream in = response.body()) {
+                if (response.statusCode() != 200) {
+                    throw new IOException("Failed to download " + uri + ": HTTP " + response.statusCode());
+                }
+                try (OutputStream out = targetPath.write()) {
+                    in.transferTo(out);
+                }
             }
         }
     }
