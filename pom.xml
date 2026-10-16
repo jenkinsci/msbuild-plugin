@@ -64,11 +64,6 @@
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <repositories>
@@ -84,27 +79,4 @@
         </pluginRepository>
     </pluginRepositories>
 
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.openrewrite.maven</groupId>
-                    <artifactId>rewrite-maven-plugin</artifactId>
-                    <version>6.46.1</version>
-                    <configuration>
-                        <activeRecipes>
-                            <recipe>org.openrewrite.jenkins.github.AddTeamToCodeowners</recipe>
-                        </activeRecipes>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.openrewrite.recipe</groupId>
-                            <artifactId>rewrite-jenkins</artifactId>
-                            <version>0.37.1</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>
