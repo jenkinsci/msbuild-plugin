@@ -104,6 +104,12 @@ class MsBuildInstallerTest {
     }
 
     @Test
+    void stripTrailingBackslash() {
+        assertEquals("C:\\a b", MsBuildInstaller.stripTrailingBackslash("C:\\a b\\"));
+        assertEquals("C:\\a b", MsBuildInstaller.stripTrailingBackslash("C:\\a b"));
+    }
+
+    @Test
     void ensureArguments() {
         String[] required = {"--quiet", "--wait", "--norestart"};
         assertEquals("--quiet --wait --norestart", MsBuildInstaller.ensureArguments("--quiet", required));

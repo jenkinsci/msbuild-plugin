@@ -332,6 +332,15 @@ class MsBuildBuilderTest {
         assertEquals(windows("\"msbuild.exe", "\"C:\\a b\\x.sln\"", "&&", "exit", "%%ERRORLEVEL%%\""),
                 run.launcher.lastCommand());
 
+        // a lone or unbalanced quote is not a quoted path and stays part of the name
+        run = run(r, new MsBuildBuilder(null, "\"x.sln", "", false, false, false, true));
+        assertEquals(windows("\"msbuild.exe", "\"\"\"x.sln\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+
+        run = run(r, new MsBuildBuilder(null, "\"", "", false, false, false, true));
+        assertEquals(windows("\"msbuild.exe", "\"\"\"\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+
         FreeStyleProject p = r.createFreeStyleProject();
         p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("F", " ")));
         run = run(r, p, new MsBuildBuilder(null, "${F}", "", false, false, false, true), null);
