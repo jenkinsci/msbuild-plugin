@@ -255,13 +255,8 @@ public class MsBuildBuilder extends Builder {
             String pathToMsBuild = getToolFullPath(launcher, ai.getHome(), execName);
             FilePath exec = new FilePath(launcher.getChannel(), pathToMsBuild);
 
-            try {
-                if (!exec.exists()) {
-                    listener.fatalError(pathToMsBuild + " doesn't exist");
-                    return false;
-                }
-            } catch (IOException e) {
-                listener.fatalError("Failed checking for existence of " + pathToMsBuild);
+            if (!exec.exists()) {
+                listener.fatalError(pathToMsBuild + " doesn't exist");
                 return false;
             }
 
