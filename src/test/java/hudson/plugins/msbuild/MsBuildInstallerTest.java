@@ -22,6 +22,7 @@ import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -56,7 +57,8 @@ class MsBuildInstallerTest {
     @AfterEach
     void tearDown() {
         MsBuildInstaller.installerRetryMillis = 30000;
-        MsBuildInstaller.DescriptorImpl.VERSION_URL_MAP.remove("test");
+        MsBuildInstaller.visualStudioRoot = "C:\\Program Files (x86)\\Microsoft Visual Studio\\";
+        MsBuildInstaller.DescriptorImpl.RELEASES.remove("test");
     }
 
     // --- paths and arguments ------------------------------------------------
@@ -76,6 +78,10 @@ class MsBuildInstallerTest {
                 MsBuildInstaller.buildToolsInstallPath(node, "2019", null).getRemote());
         assertEquals(MsBuildInstaller.buildToolsInstallPath(node, "2019", null),
                 MsBuildInstaller.buildToolsInstallPath(node, "2019", ""), "empty path falls back to the default");
+        assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools",
+                MsBuildInstaller.buildToolsInstallPath(node, "2026", null).getRemote());
+        assertEquals("C:\\Program Files (x86)\\Microsoft Visual Studio\\1999\\BuildTools",
+                MsBuildInstaller.buildToolsInstallPath(node, "1999", null).getRemote(), "unknown version keeps its name");
     }
 
     @Test
@@ -101,6 +107,11 @@ class MsBuildInstallerTest {
                 MsBuildInstaller.extractInstallPath("--quiet --installPath \"C:\\Program Files\\MSBuild\""));
         assertEquals("C:\\Program Files\\MSBuild", MsBuildInstaller.extractInstallPath(
                 "--installPath \"C:\\Program Files\\MSBuild\" --installPath D:\\MSBuild"), "first one wins");
+        assertEquals("D:\\MSBuild", MsBuildInstaller.extractInstallPath("--path install=D:\\MSBuild --wait"));
+        assertEquals("C:\\Program Files\\MSBuild",
+                MsBuildInstaller.extractInstallPath("--path install=\"C:\\Program Files\\MSBuild\""));
+        assertEquals("D:\\MSBuild", MsBuildInstaller.extractInstallPath("--INSTALLPATH D:\\MSBuild"), "case-insensitive");
+        assertNull(MsBuildInstaller.extractInstallPath("--path cache=D:\\cache"));
     }
 
     @Test
@@ -192,7 +203,8 @@ class MsBuildInstallerTest {
             toolDir = dir.child("agent").child("tools").child("vs");
             msBuildExe = new FilePath(installDir.toFile()).child("MSBuild").child("Current").child("Bin")
                     .child("MSBuild.exe");
-            MsBuildInstaller.DescriptorImpl.VERSION_URL_MAP.put("test", serve(new byte[] {42}));
+            MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
+                    new MsBuildInstaller.DescriptorImpl.Release(serve(new byte[] {42}), "test"));
             installer.setSelectedVersion("test");
             installer.setAdditionalArguments("--installPath \"" + installDir + "\"");
         }
@@ -274,6 +286,30 @@ class MsBuildInstallerTest {
 
         assertFalse(install.arguments(0).contains("--config"));
         assertEquals("", install.marker().readToString());
+    }
+
+    @Test
+    void freshInstallPinsDefaultInstallPath() throws Exception {
+        Install install = new Install();
+        install.installer.setAdditionalArguments(null);
+        MsBuildInstaller.visualStudioRoot = tmp + File.separator;
+        String defaultPath = MsBuildInstaller.stripTrailingBackslash(
+                MsBuildInstaller.buildToolsInstallPath(install.node, "test", null).getRemote());
+
+        install.run();
+
+        assertEquals(List.of("--quiet", "--wait", "--norestart", "--installPath", defaultPath),
+                install.arguments(0));
+    }
+
+    @Test
+    void freshInstallKeepsGivenPathInstall() throws Exception {
+        Install install = new Install();
+        install.installer.setAdditionalArguments("--path install=\"" + install.installDir + "\"");
+
+        install.run();
+
+        assertFalse(install.arguments(0).contains("--installPath"), install.arguments(0).toString());
     }
 
     @Test
@@ -391,7 +427,8 @@ class MsBuildInstallerTest {
             exchange.close();
         });
         String shortUrl = install.serverUrl("/short");
-        MsBuildInstaller.DescriptorImpl.VERSION_URL_MAP.put("test", shortUrl);
+        MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
+                new MsBuildInstaller.DescriptorImpl.Release(shortUrl, "test"));
 
         install.run();
 
@@ -484,7 +521,8 @@ class MsBuildInstallerTest {
     @Test
     void invalidUrlRaisesIOException() throws Exception {
         Install install = new Install();
-        MsBuildInstaller.DescriptorImpl.VERSION_URL_MAP.put("test", "not a uri");
+        MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
+                new MsBuildInstaller.DescriptorImpl.Release("not a uri", "test"));
 
         IOException e = assertThrows(IOException.class, install::run);
         assertEquals("Invalid URI: not a uri", e.getMessage());
@@ -526,6 +564,8 @@ class MsBuildInstallerTest {
 
     @Test
     void urlForVersion() {
+        assertEquals("https://aka.ms/vs/18/stable/vs_buildtools.exe",
+                MsBuildInstaller.DescriptorImpl.getUrlForVersion("2026"));
         assertEquals("https://aka.ms/vs/17/release/vs_buildtools.exe",
                 MsBuildInstaller.DescriptorImpl.getUrlForVersion("2022"));
         assertEquals("https://aka.ms/vs/16/release/vs_buildtools.exe",
@@ -553,8 +593,8 @@ class MsBuildInstallerTest {
 
         try (ACLContext ignored = ACL.as(User.getById("admin", true))) {
             ListBoxModel items = descriptor.doFillSelectedVersionItems();
-            assertEquals(List.of("2022", "2019"), items.stream().map(o -> o.value).toList());
-            assertEquals("Build Tools 2022", items.get(0).name);
+            assertEquals(List.of("2026", "2022", "2019"), items.stream().map(o -> o.value).toList());
+            assertEquals("Build Tools 2026", items.get(0).name);
         }
         try (ACLContext ignored = ACL.as(User.getById("user", true))) {
             assertThrows(AccessDeniedException3.class, descriptor::doFillSelectedVersionItems);
