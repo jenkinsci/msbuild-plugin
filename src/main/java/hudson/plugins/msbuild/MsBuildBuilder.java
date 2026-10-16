@@ -232,7 +232,7 @@ public class MsBuildBuilder extends Builder {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException, IOException {
         if (launcher.isUnix()) {
-            listener.fatalError("Unable to use this plugin on this kind of operation system");
+            listener.fatalError("Unable to use this plugin on this kind of operating system");
             return false;
         }
         ArgumentListBuilder args = new ArgumentListBuilder();
@@ -451,17 +451,11 @@ public class MsBuildBuilder extends Builder {
     }
 
     /**
-     * Tokenize a set of arguments, preserving quotes.
-     *
-     * @param args
-     * @return
-     */
-
-    @NonNull
-    /**
      * Splits on whitespace outside double quotes and removes the quotes, like the Windows command line.
-     * Backslashes are literal, so paths like {@code bin\} or {@code \\server\share} keep them.
+     * Backslashes are literal, so paths like {@code bin\} or {@code \\server\share} keep them, except before a
+     * quote: {@code \"} is a literal quote and {@code \\"} a backslash followed by a quote that opens or closes.
      */
+    @NonNull
     static String[] tokenizeArgs(String args) {
         List<String> tokens = new ArrayList<>();
         if (args == null) {
@@ -470,8 +464,24 @@ public class MsBuildBuilder extends Builder {
         StringBuilder token = new StringBuilder();
         boolean quoted = false;
         boolean inToken = false;
-        for (char c : args.toCharArray()) {
-            if (c == '"') {
+        for (int i = 0; i < args.length(); i++) {
+            char c = args.charAt(i);
+            if (c == '\\') {
+                int end = i;
+                while (end < args.length() && args.charAt(end) == '\\') {
+                    end++;
+                }
+                int backslashes = end - i;
+                boolean beforeQuote = end < args.length() && args.charAt(end) == '"';
+                token.append("\\".repeat(beforeQuote ? backslashes / 2 : backslashes));
+                if (beforeQuote && backslashes % 2 != 0) {
+                    token.append('"');
+                    end++;
+                }
+                inToken = true;
+                // the loop's i++ moves to the quote that opens or closes, or past the run
+                i = end - 1;
+            } else if (c == '"') {
                 quoted = !quoted;
                 inToken = true;
             } else if (Character.isWhitespace(c) && !quoted) {

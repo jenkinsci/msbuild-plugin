@@ -66,6 +66,17 @@ class MsBuildBuilderTest {
     }
 
     @Test
+    void backslashesBeforeQuoteFollowWindowsRules() {
+        assertArrayEquals(new String[] {"/p:DefineConstants=\"A;B\"", "/m"},
+                MsBuildBuilder.tokenizeArgs("/p:DefineConstants=\\\"A;B\\\" /m"));
+        assertArrayEquals(new String[] {"/p:X=a \"q\" b"}, MsBuildBuilder.tokenizeArgs("/p:X=\"a \\\"q\\\" b\""));
+        assertArrayEquals(new String[] {"/p:Out=C:\\a b\\", "/m"},
+                MsBuildBuilder.tokenizeArgs("\"/p:Out=C:\\a b\\\\\" /m"));
+        assertArrayEquals(new String[] {"a\\\"b c"}, MsBuildBuilder.tokenizeArgs("a\\\\\\\"b\" c\""));
+        assertArrayEquals(new String[] {"\\\\"}, MsBuildBuilder.tokenizeArgs("\\\\"));
+    }
+
+    @Test
     void onlyDoubleQuotesGroup() {
         assertArrayEquals(new String[] {"/p:A='x", "y'", "", "a b"},
                 MsBuildBuilder.tokenizeArgs("  /p:A='x\ty'  \"\"  \"a b\" "));
@@ -366,11 +377,21 @@ class MsBuildBuilderTest {
     @WithJenkins
     void outDirWithTrailingBackslash(JenkinsRule r) throws Exception {
         Run run = run(r, new MsBuildBuilder(null, "x.sln",
-                "/p:Configuration=Release;OutDir=C:\\out\\ \"/p:Docs=C:\\a b\\\" /p:Plain=bin\\", false, false, false, true));
+                "/p:Configuration=Release;OutDir=C:\\out\\ \"/p:Docs=C:\\a b\\\\\" /p:Plain=bin\\", false, false, false, true));
 
         // msbuild.exe reads \\" as \ followed by the closing quote
         assertEquals(windows("\"msbuild.exe", "\"/p:Configuration=Release;OutDir=C:\\out\\\\\"",
                 "\"/p:Docs=C:\\a b\\\\\"", "/p:Plain=bin\\", "x.sln", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void escapedQuotesReachMsBuild(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "/p:DefineConstants=\\\"A;B\\\"", false, false, false, true));
+
+        // "" inside quotes is a literal quote, so msbuild.exe gets /p:DefineConstants="A;B"
+        assertEquals(windows("\"msbuild.exe", "\"/p:DefineConstants=\"\"A;B\"\"\"", "&&", "exit", "%%ERRORLEVEL%%\""),
                 run.launcher.lastCommand());
     }
 
@@ -585,7 +606,7 @@ class MsBuildBuilderTest {
         Run run = run(r, new MsBuildBuilder(null, null, "", false, false, false, false), l -> l.unix = true);
 
         r.assertBuildStatus(Result.FAILURE, run.build);
-        r.assertLogContains("Unable to use this plugin on this kind of operation system", run.build);
+        r.assertLogContains("Unable to use this plugin on this kind of operating system", run.build);
         assertTrue(run.launcher.commands.isEmpty());
     }
 
