@@ -23,7 +23,7 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:t="/hudson/tools">
     <f:entry title="${%Version}" field="selectedVersion">
         <f:select/>
     </f:entry>
@@ -33,4 +33,5 @@ THE SOFTWARE.
   <f:entry title=".vsconfig" field="vsconfig">
     <f:textarea/>
   </f:entry>
+  <t:label/>
 </j:jelly>

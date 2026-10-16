@@ -19,7 +19,8 @@ public class MSBuildErrorNote extends ConsoleNote<Object> {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
+    // "error" starts the line or follows ": " (canonical MSBuild format), optionally as "fatal error" (cl.exe)
+    public final static Pattern PATTERN = Pattern.compile("\\s*(.*:\\s+)?(?:fatal\\s+)?[Ee]rror\\s+(([A-Z]*)\\d+)?:\\s(.*)");
 
     public MSBuildErrorNote() {
     }

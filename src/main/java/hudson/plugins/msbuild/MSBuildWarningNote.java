@@ -1,9 +1,11 @@
 package hudson.plugins.msbuild;
 
+import hudson.Extension;
 import hudson.MarkupText;
 import hudson.console.ConsoleAnnotationDescriptor;
 import hudson.console.ConsoleAnnotator;
 import hudson.console.ConsoleNote;
+import org.jenkinsci.Symbol;
 
 import java.io.Serial;
 import java.util.regex.Pattern;
@@ -28,6 +30,7 @@ public class MSBuildWarningNote extends ConsoleNote<Object> {
         return null;
     }
 
+    @Extension @Symbol("msbuildWarning")
     public static final class DescriptorImpl extends ConsoleAnnotationDescriptor {
 
         @Override

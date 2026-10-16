@@ -5,6 +5,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.ProxyConfiguration;
+import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -14,16 +15,12 @@ import hudson.tools.ToolInstallerDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
@@ -31,7 +28,6 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,10 +35,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MsBuildInstaller extends ToolInstaller {
+
+    // Exit codes of the Visual Studio installer, see
+    // https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio#error-codes
+    private static final int EXIT_SUCCESS = 0;
+    private static final int EXIT_REBOOT_REQUIRED = 3010;
+    /** Installer running (1001), Visual Studio in use (1003), another installation (1618), VS processes (8006). */
+    private static final Set<Integer> EXIT_BUSY = Set.of(1001, 1003, 1618, 8006);
+    private static final int MAX_ATTEMPTS = 20;
+
+    /**
+     * Written to the tool directory after a successful install, update or modify. It holds the applied
+     * {@code .vsconfig} and its timestamp is the time of the last update.
+     */
+    static final String MARKER = ".installed";
+    private static final long UPDATE_INTERVAL_MILLIS = TimeUnit.HOURS.toMillis(24);
+
+    /** Delay before retrying while another installation is running; tests set it to 0. */
+    static long installerRetryMillis = 30000;
 
     private String selectedVersion;
     private String additionalArguments;
@@ -110,84 +126,85 @@ public class MsBuildInstaller extends ToolInstaller {
                 extractInstallPath(givenArguments));
         FilePath msBuildBinPath = msBuildBinPath(node, selectedVersion, extractInstallPath(givenArguments));
         FilePath msBuildExe = msBuildBinPath.child("MSBuild.exe");
-        boolean usesConfigFile = useConfigFile(getVsconfig(), expected);
-        if (!needsModify(expected) && !needsUpdate(expected) && msBuildExe.exists()) {
+        FilePath marker = expected.child(MARKER);
+        String config = Util.fixEmpty(getVsconfig());
+        boolean installed = msBuildExe.exists();
+        String applied = marker.exists() ? marker.readToString() : null;
+        if (applied == null) {
+            // state file of plugin versions up to 1.44, replaced by the marker
+            expected.child("config.json").delete();
+        }
+        boolean configChanged = config != null && !config.equals(applied);
+        boolean outdated = applied == null
+                || System.currentTimeMillis() - marker.lastModified() > UPDATE_INTERVAL_MILLIS;
+        if (installed && !configChanged && !outdated) {
             return msBuildBinPath;
         }
-        buildToolsInstallPath.mkdirs();
         String url = DescriptorImpl.getUrlForVersion(selectedVersion);
+        if (url == null) {
+            throw new IOException("Unsupported MSBuild version: " + selectedVersion);
+        }
+        URI uri;
         try {
-            URI uri = new URI(url);
-            log.getLogger().println("Downloading MSBuild version " + selectedVersion + " from " + url);
-            downloadFile(uri, vs_BuildToolsExePath);
+            uri = new URI(url);
         } catch (URISyntaxException e) {
             throw new IOException("Invalid URI: " + url);
         }
+        buildToolsInstallPath.mkdirs();
 
-        waitUntilInstallerFinishes(log);
-        vs_BuildToolsExePath.chmod(0755);
-
-        if (!msBuildExe.exists()) {
-            String[] requiredArgs = { "--quiet", "--wait", "--norestart" };
-            givenArguments = ensureArguments(givenArguments, requiredArgs);
-            if (usesConfigFile) {
-                givenArguments += " --config " + expected.child(".vsconfig").getRemote();
-            }
-
-            log.getLogger().println("Installing MSBuild version " + selectedVersion + " from " + url);
-
-            boolean installResult = runVs_BuildToolsExe(vs_BuildToolsExePath, givenArguments, buildToolsInstallPath,
-                    node, log, expected);
-
-            if (!installResult) {
-                throw new IOException("Installation failed with exit code " + installResult);
-            }
-
-            logLastUpdated(expected);
-
-        } else if (needsModify(expected) || needsUpdate(expected)) {
-            String updateArguments = "update --quiet --wait --norestart --installPath " + buildToolsInstallPath;
-            String modifyArguments = "modify --quiet --wait --norestart --installPath " + buildToolsInstallPath;
-            log.getLogger().println("Updating MSBuild version " + selectedVersion + " from " + url);
-
-            if (usesConfigFile) {
-                updateArguments += " --config " + expected.child(".vsconfig").getRemote();
-                modifyArguments += " --config " + expected.child(".vsconfig").getRemote();
-            }
-
-            boolean updateResult = runVs_BuildToolsExe(vs_BuildToolsExePath, updateArguments, buildToolsInstallPath,
-                    node, log, expected);
-            boolean modifyResult = runVs_BuildToolsExe(vs_BuildToolsExePath, modifyArguments, buildToolsInstallPath,
-                    node, log, expected);
-
-            if (!updateResult || !modifyResult) {
-                throw new IOException("Update failed with exit code " + updateResult);
-            }
-            logNeedsModify(expected, false);
-            logLastUpdated(expected);
+        FilePath vsConfigFile = expected.child(".vsconfig");
+        if (config != null) {
+            vsConfigFile.write(config, "UTF-8");
+        } else {
+            vsConfigFile.delete();
         }
+        // paths are added as single arguments so spaces (e.g. "Program Files (x86)") survive
+        String installPath = stripTrailingBackslash(buildToolsInstallPath.getRemote());
+        String configPath = vsConfigFile.getRemote();
+
+        if (!installed) {
+            String[] requiredArgs = { "--quiet", "--wait", "--norestart" };
+            ArgumentListBuilder installArguments = new ArgumentListBuilder()
+                    .addTokenized(ensureArguments(givenArguments, requiredArgs));
+            if (config != null) {
+                installArguments.add("--config", configPath);
+            }
+            download(uri, vs_BuildToolsExePath, log);
+            log.getLogger().println("Installing MSBuild version " + selectedVersion);
+            runVs_BuildToolsExe(vs_BuildToolsExePath, installArguments, node, log, expected);
+        } else {
+            // a failure fails the build and leaves the marker untouched, so the next run retries
+            download(uri, vs_BuildToolsExePath, log);
+            if (outdated) {
+                log.getLogger().println("Updating MSBuild version " + selectedVersion);
+                runVs_BuildToolsExe(vs_BuildToolsExePath, new ArgumentListBuilder("update", "--quiet",
+                        "--wait", "--norestart", "--installPath", installPath), node, log, expected);
+            }
+            if (configChanged) {
+                // --config is only documented for install and modify
+                log.getLogger().println("Applying changed .vsconfig to MSBuild version " + selectedVersion);
+                runVs_BuildToolsExe(vs_BuildToolsExePath, new ArgumentListBuilder("modify", "--quiet",
+                        "--wait", "--norestart", "--installPath", installPath, "--config", configPath),
+                        node, log, expected);
+            }
+        }
+        marker.write(config == null ? "" : config, "UTF-8");
+        // set by the controller's clock, which is also the one it is compared with
+        marker.touch(System.currentTimeMillis());
         return msBuildBinPath;
     }
 
-    /**
-     * Check if the installer is running
-     *
-     * @param processName String
-     *
-     * @return boolean
-     *
-     * @throws IOException
-     */
-    public static boolean isInstallerRunning(String processName) throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder("jps", "-l");
-        Process process = processBuilder.start();
+    private static void download(URI uri, FilePath target, TaskListener log)
+            throws IOException, InterruptedException {
+        // aka.ms only redirects, log where the bootstrapper really came from
+        URI resolved = downloadFile(uri, target);
+        log.getLogger().println("Downloaded Visual Studio Build Tools bootstrapper from " + resolved);
+        target.chmod(0755);
+    }
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            return reader.lines().anyMatch(line -> line.contains(processName));
-        } finally {
-            process.destroy();
-        }
+    /** A trailing backslash before the closing quote would escape it: {@code "C:\\a b\\"}. */
+    static String stripTrailingBackslash(String path) {
+        return path.endsWith("\\") ? path.substring(0, path.length() - 1) : path;
     }
 
     /**
@@ -203,7 +220,7 @@ public class MsBuildInstaller extends ToolInstaller {
      */
     public static FilePath buildToolsInstallPath(Node node, String selectedVersion, String givenInstallPath) {
         return new FilePath(node.getChannel(),
-                Objects.requireNonNullElseGet(givenInstallPath,
+                Objects.requireNonNullElseGet(Util.fixEmpty(givenInstallPath),
                         () -> "C:\\Program Files (x86)\\Microsoft Visual Studio\\" + selectedVersion + "\\BuildTools\\"));
     }
 
@@ -219,9 +236,6 @@ public class MsBuildInstaller extends ToolInstaller {
      * @return FilePath
      */
     public static FilePath msBuildBinPath(Node node, String selectedVersion, String givenInstallPath) {
-        if (givenInstallPath != null && !givenInstallPath.isEmpty()) {
-            return new FilePath(node.getChannel(), givenInstallPath).child("\\MSBuild\\Current\\Bin");
-        }
         return buildToolsInstallPath(node, selectedVersion, givenInstallPath).child("\\MSBuild\\Current\\Bin");
     }
 
@@ -280,33 +294,11 @@ public class MsBuildInstaller extends ToolInstaller {
     }
 
     /**
-     * Wait until the installer finishes
-     *
-     * @param log TaskListener
-     *
-     * @throws InterruptedException
-     *
-     * @throws IOException
-     */
-    private static void waitUntilInstallerFinishes(TaskListener log) throws InterruptedException, IOException {
-        for (int i = 0; i < 20; i++) {
-            if (isInstallerRunning("setup.exe") || isInstallerRunning("vs_BuildTools.exe")) {
-                log.getLogger().println("Visual Studio Build Tools waiting for the another Installer to finish...");
-                Thread.sleep(30000);
-            } else {
-                break;
-            }
-        }
-    }
-
-    /**
      * Run the vs_BuildTools.exe
      *
      * @param vs_BuildToolsExePath                       FilePath
      *
-     * @param givenArguments                             String
-     *
-     * @param buildbuildToolsInstallPathToolsInstallPath FilePath
+     * @param givenArguments                             ArgumentListBuilder
      *
      * @param node                                       Node
      *
@@ -314,156 +306,35 @@ public class MsBuildInstaller extends ToolInstaller {
      *
      * @param expected                                   FilePath
      *
-     * @return boolean
-     *
      * @throws IOException
      *
      * @throws InterruptedException
      */
-    private static boolean runVs_BuildToolsExe(FilePath vs_BuildToolsExePath, String givenArguments,
-            FilePath buildbuildToolsInstallPathToolsInstallPath, Node node, TaskListener log, FilePath expected)
+    private static void runVs_BuildToolsExe(FilePath vs_BuildToolsExePath, ArgumentListBuilder givenArguments,
+            Node node, TaskListener log, FilePath expected)
             throws IOException, InterruptedException {
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add("cmd.exe", "/C", "start", "/wait");
+        args.add("cmd.exe", "/C", "start", "", "/wait");
         args.add(vs_BuildToolsExePath.getRemote());
-        args.addTokenized(givenArguments);
+        args.add(givenArguments.toList());
         Launcher launcher = node.createLauncher(log);
-        int result = launcher.launch().cmds(args).stdout(log).pwd(expected).join();
-
-        if (result != 0) {
+        for (int attempt = 1;; attempt++) {
+            int result = launcher.launch().cmds(args).stdout(log).pwd(expected).join();
+            if (result == EXIT_SUCCESS) {
+                return;
+            }
+            if (result == EXIT_REBOOT_REQUIRED) {
+                log.getLogger().println("Visual Studio Build Tools installed; a reboot is required to complete it");
+                return;
+            }
+            if (EXIT_BUSY.contains(result) && attempt < MAX_ATTEMPTS) {
+                log.getLogger().println("Visual Studio installer is busy (exit code " + result + "), retrying in "
+                        + installerRetryMillis / 1000 + "s...");
+                Thread.sleep(installerRetryMillis);
+                continue;
+            }
             throw new IOException("Installation failed with exit code " + result);
         }
-        return true;
-    }
-
-    /**
-     * Use the .vsconfig file to install the Visual Studio Build Tools
-     *
-     * @param vsconfig String
-     *
-     * @param expected FilePath
-     *
-     * @return boolean
-     *
-     * @throws IOException
-     *
-     * @throws InterruptedException
-     */
-    public static boolean useConfigFile(String vsconfig, FilePath expected)
-            throws IOException, InterruptedException {
-        if (vsconfig != null && !vsconfig.isEmpty()) {
-            FilePath vsConfigFile = expected.child(".vsconfig");
-            if (vsConfigFile.exists()) {
-                String existingContent = vsConfigFile.readToString();
-                if (!existingContent.equals(vsconfig)) {
-                    vsConfigFile.write(vsconfig, "UTF-8");
-                    logNeedsModify(expected, true);
-                } else {
-                    logNeedsModify(expected, false);
-                }
-            } else {
-                vsConfigFile.write(vsconfig, "UTF-8");
-                logNeedsModify(expected, true);
-            }
-            return true;
-        } else {
-            expected.child(".vsconfig").delete();
-            logNeedsModify(expected, true);
-            return false;
-        }
-    }
-
-    /**
-     * Log the last updated time
-     *
-     * @param expected FilePath
-     *
-     * @throws IOException
-     *
-     * @throws InterruptedException
-     */
-    private static void logLastUpdated(FilePath expected) throws IOException, InterruptedException {
-        FilePath lastUpdated = expected.child("config.json");
-        JSONObject json;
-        if (lastUpdated.exists()) {
-            String content = lastUpdated.readToString();
-            json = (JSONObject) JSONSerializer.toJSON(content);
-        } else {
-            json = new JSONObject();
-        }
-        json.put("lastUpdated", System.currentTimeMillis() / 1000);
-        lastUpdated.write(json.toString(), "UTF-8");
-    }
-
-    /**
-     * Check if the installer needs to be updated
-     *
-     * @param expected FilePath
-     *
-     * @return boolean
-     */
-    public static boolean needsUpdate(FilePath expected) {
-        try {
-            FilePath needsModify = expected.child("config.json");
-            if (needsModify.exists()) {
-                JSONObject json = JSONObject.fromObject(needsModify.readToString());
-                if (json.has("lastUpdated")) {
-                    long lastUpdatedTimestamp = json.getLong("lastUpdated");
-                    long currentTimestamp = System.currentTimeMillis() / 1000;
-                    long diffSeconds = currentTimestamp - lastUpdatedTimestamp;
-                    long diffHours = diffSeconds / 3600;
-                    return diffHours > 24;
-                }
-            }
-        } catch (IOException | InterruptedException e) {
-            return true;
-        }
-        return true;
-    }
-
-    /**
-     * Log the needsModify file
-     *
-     * @param expected FilePath
-     *
-     * @throws IOException
-     *
-     * @throws InterruptedException
-     */
-    private static void logNeedsModify(FilePath expected, Boolean updateValue)
-            throws IOException, InterruptedException {
-        FilePath needsModify = expected.child("config.json");
-        JSONObject json;
-        if (needsModify.exists()) {
-            String content = needsModify.readToString();
-            json = (JSONObject) JSONSerializer.toJSON(content);
-        } else {
-            json = new JSONObject();
-        }
-        json.put("needsModify", updateValue);
-        needsModify.write(json.toString(), "UTF-8");
-    }
-
-    /**
-     * Check if the installer needs to be modified
-     *
-     * @param expected FilePath
-     *
-     * @return boolean
-     *
-     * @throws IOException
-     *
-     * @throws InterruptedException
-     */
-    public static boolean needsModify(FilePath expected) throws IOException, InterruptedException {
-        FilePath needsModify = expected.child("config.json");
-        if (needsModify.exists()) {
-            JSONObject json = JSONObject.fromObject(needsModify.readToString());
-            if (json.has("needsModify")) {
-                return json.getBoolean("needsModify");
-            }
-        }
-        return false;
     }
 
     /**
@@ -473,8 +344,10 @@ public class MsBuildInstaller extends ToolInstaller {
      *
      * @param targetPath FilePath
      *
+     * @return the URI the file was downloaded from after redirects
+     *
      */
-    public static void downloadFile(URI uri, FilePath targetPath)
+    public static URI downloadFile(URI uri, FilePath targetPath)
             throws IOException, InterruptedException {
         HttpRequest request = ProxyConfiguration.newHttpRequestBuilder(uri).GET().build();
         try (HttpClient client = ProxyConfiguration.newHttpClient()) {
@@ -486,6 +359,8 @@ public class MsBuildInstaller extends ToolInstaller {
                 try (OutputStream out = targetPath.write()) {
                     in.transferTo(out);
                 }
+                // the URI after redirects
+                return response.uri();
             }
         }
     }
@@ -517,7 +392,7 @@ public class MsBuildInstaller extends ToolInstaller {
     @Extension
     public static final class DescriptorImpl extends ToolInstallerDescriptor<MsBuildInstaller> {
 
-        private static final Map<String, String> VERSION_URL_MAP = new HashMap<>();
+        static final Map<String, String> VERSION_URL_MAP = new HashMap<>();
 
         static {
             VERSION_URL_MAP.put("2022",

@@ -1,90 +1,612 @@
 package hudson.plugins.msbuild;
 
+import hudson.Launcher;
+import hudson.console.ConsoleNote;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.PasswordParameterDefinition;
+import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
+import hudson.tasks.Builder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestBuilder;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.LocalData;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Jonathan Zimmerman
  */
-@WithJenkins
 class MsBuildBuilderTest {
 
-    @Test
-    void shouldStripQuotedArguments(JenkinsRule r) {
-        final String quotedPlatform = "/p:Platform=\"Any CPU\"";
-        final String strippedPlatform = "/p:Platform=Any CPU";
+    // --- pure helpers -------------------------------------------------------
 
-        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(quotedPlatform);
-        assertNotNull(tokenizedArgs);
-        assertEquals(1, tokenizedArgs.length);
-        assertEquals(strippedPlatform, tokenizedArgs[0]);
+    @Test
+    void shouldStripQuotedArguments() {
+        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs("/p:Platform=\"Any CPU\"");
+        assertArrayEquals(new String[] {"/p:Platform=Any CPU"}, tokenizedArgs);
     }
 
     @Test
-    void shouldSplitArguments(JenkinsRule r) {
-        final String arguments = "/t:Build /p:Configuration=Debug";
-
-        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(arguments);
-        assertNotNull(tokenizedArgs);
-        assertEquals(2, tokenizedArgs.length);
-        assertEquals("/t:Build", tokenizedArgs[0]);
-        assertEquals("/p:Configuration=Debug", tokenizedArgs[1]);
+    void shouldSplitArguments() {
+        String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs("/t:Build /p:Configuration=Debug");
+        assertArrayEquals(new String[] {"/t:Build", "/p:Configuration=Debug"}, tokenizedArgs);
     }
 
     @Test
-    void endEscapedCharacter(JenkinsRule r) {
+    void endEscapedCharacter() {
         final String oneArgumentsWithEndBackslash = "\\\\RemoteServerName\\OfficialBuilds\\Published\\";
         String[] tokenizedArgs = MsBuildBuilder.tokenizeArgs(oneArgumentsWithEndBackslash);
-        assertEquals(1, tokenizedArgs.length);
-        assertEquals(oneArgumentsWithEndBackslash, tokenizedArgs[0]);
+        assertArrayEquals(new String[] {oneArgumentsWithEndBackslash}, tokenizedArgs);
     }
 
     @Test
-    @LocalData
-    void configRoundtrip(JenkinsRule r) {
-        FreeStyleProject project = (FreeStyleProject)r.jenkins.getAllItems().get(0);
-        assertDoesNotThrow(() -> r.configRoundtrip(project));
+    void backslashesAreLiteral() {
+        assertArrayEquals(new String[] {"/p:OutDir=bin\\", "/m"}, MsBuildBuilder.tokenizeArgs("/p:OutDir=bin\\ /m"));
+        assertArrayEquals(new String[] {"/p:Pub=\\\\srv\\share", "/p:A=x\\\\y"},
+                MsBuildBuilder.tokenizeArgs("/p:Pub=\\\\srv\\share /p:A=x\\\\y"));
+    }
+
+    @Test
+    void onlyDoubleQuotesGroup() {
+        assertArrayEquals(new String[] {"/p:A='x", "y'", "", "a b"},
+                MsBuildBuilder.tokenizeArgs("  /p:A='x\ty'  \"\"  \"a b\" "));
+    }
+
+    @Test
+    void tokenizeNullGivesEmptyArray() {
+        assertEquals(0, MsBuildBuilder.tokenizeArgs(null).length);
     }
 
     @Test
     void testValidCharset() {
-        // Assuming CHARSET_CODE_MAP is populated with UTF-8 -> 65001
-        Charset charset = StandardCharsets.UTF_8;
-        int expectedCodePage = 65001;
-        int actualCodePage = MsBuildBuilder.getCodePageIdentifier(charset);
-        assertEquals(expectedCodePage, actualCodePage, "Code page should match expected for UTF-8");
+        assertEquals(65001, MsBuildBuilder.getCodePageIdentifier(StandardCharsets.UTF_8));
     }
 
     @Test
     void testInvalidCharset() {
-        // Assuming there's no entry in CHARSET_CODE_MAP for the provided charset
-        Charset charset = Charset.forName("ISO-8859-16");
-        int expectedCodePage = 0; // As per method's default case
-        int actualCodePage = MsBuildBuilder.getCodePageIdentifier(charset);
-        assertEquals(expectedCodePage, actualCodePage, "Code page for unrecognized charset should be 0");
+        assertEquals(0, MsBuildBuilder.getCodePageIdentifier(Charset.forName("ISO-8859-16")),
+                "Code page for unrecognized charset should be 0");
+    }
+
+    @Test
+    void utf16HasNoChcpCodePage() {
+        // chcp rejects 1200/12000/12001, and lines cannot be split on '\n' bytes
+        assertEquals(0, MsBuildBuilder.getCodePageIdentifier(StandardCharsets.UTF_16));
+        assertEquals(0, MsBuildBuilder.getCodePageIdentifier(Charset.forName("UTF-32")));
     }
 
     @Test
     void testNullCharset() {
-        assertThrows(NullPointerException.class, () ->
-            // This should throw NullPointerException as the charset is null
-            MsBuildBuilder.getCodePageIdentifier(null));
+        assertThrows(NullPointerException.class, () -> MsBuildBuilder.getCodePageIdentifier(null));
     }
 
     @Test
-    void testCaseSensitivity() {
-        // Verify case insensitivity by testing an all-lowercase input
-        Charset charset = StandardCharsets.UTF_8;
-        int expectedCodePage = 65001;
-        int actualCodePage = MsBuildBuilder.getCodePageIdentifier(charset);
-        assertEquals(expectedCodePage, actualCodePage, "Code page should match expected regardless of case");
+    void testCaseInsensitivity() {
+        // Charset.name() is lower/mixed case for these, the map keys are upper case
+        assertEquals("windows-1252", Charset.forName("windows-1252").name());
+        assertEquals(1252, MsBuildBuilder.getCodePageIdentifier(Charset.forName("windows-1252")));
+        assertEquals(932, MsBuildBuilder.getCodePageIdentifier(Charset.forName("Shift_JIS")));
+    }
+
+    @Test
+    void deprecatedConstructorDefaultsChcpToEnabled() {
+        @SuppressWarnings("deprecation")
+        MsBuildBuilder builder = new MsBuildBuilder("vs", "a.sln", "/m", true, true, true);
+        assertFalse(builder.getDoNotUseChcpCommand());
+        assertEquals("vs", builder.getMsBuildName());
+        assertEquals("a.sln", builder.getMsBuildFile());
+        assertEquals("/m", builder.getCmdLineArgs());
+        assertTrue(builder.getBuildVariablesAsProperties());
+        assertTrue(builder.getContinueOnBuildFailure());
+        assertTrue(builder.getUnstableIfWarnings());
+    }
+
+    @Test
+    void toolFullPathAppendsExeForDirectory(@TempDir Path dir) throws Exception {
+        Launcher launcher = new Launcher.LocalLauncher(null);
+        assertEquals(dir + "\\msbuild.exe", MsBuildBuilder.getToolFullPath(launcher, dir.toString(), "msbuild.exe"));
+    }
+
+    @Test
+    void toolFullPathKeepsFile(@TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("msbuild.exe"));
+        Launcher launcher = new Launcher.LocalLauncher(null);
+        assertEquals(exe.toString(), MsBuildBuilder.getToolFullPath(launcher, exe.toString(), "msbuild.exe"));
+    }
+
+    @Test
+    void toolFullPathOfNullIsTreatedAsCurrentDirectory() throws Exception {
+        // "" resolves to the working directory, which is a directory, so the exe name is appended
+        assertEquals("\\msbuild.exe",
+                MsBuildBuilder.getToolFullPath(new Launcher.LocalLauncher(null), null, "msbuild.exe"));
+    }
+
+    // --- configuration ------------------------------------------------------
+
+    @Test
+    @WithJenkins
+    void configRoundtrip(JenkinsRule r) throws Exception {
+        MsBuildInstallation vs = new MsBuildInstallation("VS2022", "C:\\MSBuild", Collections.emptyList(), "/m");
+        descriptor(r).setInstallations(vs);
+        FreeStyleProject project = r.createFreeStyleProject();
+        MsBuildBuilder before = new MsBuildBuilder("VS2022", "src\\app.sln", "/t:Rebuild /p:Configuration=Release",
+                true, true, true, true);
+        project.getBuildersList().add(before);
+
+        r.configRoundtrip(project);
+
+        MsBuildBuilder after = project.getBuildersList().get(MsBuildBuilder.class);
+        assertNotSame(before, after);
+        r.assertEqualDataBoundBeans(before, after);
+        assertEquals(vs.getName(), after.getMsBuild().getName());
+    }
+
+    @Test
+    @WithJenkins
+    @LocalData
+    void legacyConfigLoads(JenkinsRule r) throws Exception {
+        // job saved by plugin 1.26, before doNotUseChcpCommand existed
+        FreeStyleProject project = r.jenkins.getItemByFullName("MsBuildBuilder-1-26", FreeStyleProject.class);
+        MsBuildBuilder builder = project.getBuildersList().get(MsBuildBuilder.class);
+        assertEquals("(Default)", builder.getMsBuildName());
+        assertEquals("project.proj", builder.getMsBuildFile());
+        assertEquals("/verbosity:detailed", builder.getCmdLineArgs());
+        assertFalse(builder.getBuildVariablesAsProperties());
+        assertFalse(builder.getContinueOnBuildFailure());
+        assertFalse(builder.getUnstableIfWarnings());
+        assertFalse(builder.getDoNotUseChcpCommand());
+        assertNull(builder.getMsBuild(), "no installation named (Default) is configured");
+
+        r.configRoundtrip(project);
+        r.assertEqualDataBoundBeans(builder, project.getBuildersList().get(MsBuildBuilder.class));
+    }
+
+    @Test
+    @WithJenkins
+    void descriptorBasics(JenkinsRule r) {
+        MsBuildBuilder.DescriptorImpl d = descriptor(r);
+        assertEquals("Build a Visual Studio project or solution using MSBuild", d.getDisplayName());
+        assertTrue(d.isApplicable(FreeStyleProject.class));
+        assertSame(r.jenkins.getDescriptorByType(MsBuildInstallation.DescriptorImpl.class), d.getToolDescriptor());
+
+        MsBuildInstallation vs = new MsBuildInstallation("VS", "C:\\MSBuild", Collections.emptyList(), null);
+        d.setInstallations(vs);
+        MsBuildInstallation[] copy = d.getInstallations();
+        copy[0] = null;
+        assertSame(vs, d.getInstallations()[0], "getInstallations must return a defensive copy");
+    }
+
+    // --- perform ------------------------------------------------------------
+
+    @Test
+    @WithJenkins
+    void defaultCommandLine(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, "app.sln", "/t:Build", false, false, false, false));
+
+        r.assertBuildStatusSuccess(run.build);
+        assertEquals(windows("\"chcp", "65001", "&", "msbuild.exe", "/t:Build", "app.sln",
+                "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+        r.assertLogContains("Path To MSBuild.exe: msbuild.exe", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void doNotUseChcpCommand(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, "", "", false, false, false, true));
+
+        assertEquals(windows("\"msbuild.exe", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void unknownCharsetSkipsChcp(JenkinsRule r) throws Exception {
+        MsBuildBuilder builder = new MsBuildBuilder(null, null, "", false, false, false, false);
+        Run run = run(r, builder, null, Charset.forName("ISO-8859-16"));
+
+        assertFalse(String.join(" ", run.launcher.lastCommand()).contains("chcp"));
+    }
+
+    @Test
+    @WithJenkins
+    void usesConfiguredInstallation(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(
+                new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(), "/nologo /m"));
+
+        Run run = run(r, new MsBuildBuilder("VS", null, "", false, false, false, true));
+
+        r.assertBuildStatusSuccess(run.build);
+        assertEquals(windows("\"" + exe, "/nologo", "/m", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+        r.assertLogContains("Path To MSBuild.exe: " + exe, run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void installationWithoutDefaultArgs(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(), null));
+
+        Run run = run(r, new MsBuildBuilder("VS", null, "", false, false, false, true));
+
+        assertEquals(windows("\"" + exe, "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void selectsInstallationByName(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path first = Files.createFile(dir.resolve("first.exe"));
+        Path second = Files.createFile(dir.resolve("second.exe"));
+        descriptor(r).setInstallations(
+                new MsBuildInstallation("A", first.toString(), Collections.emptyList(), null),
+                new MsBuildInstallation("B", second.toString(), Collections.emptyList(), null));
+
+        Run run = run(r, new MsBuildBuilder("B", null, "", false, false, false, true));
+
+        assertTrue(line(run).startsWith("\"" + second + " "), line(run));
+    }
+
+    @Test
+    @WithJenkins
+    void missingExecutableFailsBuild(JenkinsRule r, @TempDir Path dir) throws Exception {
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", dir.toString(), Collections.emptyList(), null));
+
+        Run run = run(r, new MsBuildBuilder("VS", null, "", false, false, false, false));
+
+        r.assertBuildStatus(Result.FAILURE, run.build);
+        r.assertLogContains(dir + "\\msbuild.exe doesn't exist", run.build);
+        assertTrue(run.launcher.commands.isEmpty());
+    }
+
+    @Test
+    @WithJenkins
+    void expandsVariablesAndNormalizesWhitespace(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject("job");
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("CONFIG", "Release")));
+        // JOB_NAME is only an environment variable, CONFIG also a build variable
+        Run run = run(r, p, new MsBuildBuilder(null, "${JOB_NAME}\\${CONFIG}\t.sln",
+                "/p:Configuration=${CONFIG}\t\r\n/p:Out=${JOB_NAME} \"/p:Title=a\tb\"", false, false, false, true), null);
+
+        assertEquals(windows("\"msbuild.exe", "/p:Configuration=Release", "/p:Out=job",
+                "\"/p:Title=a b\"", "\"job\\Release .sln\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void buildVariablesAsPropertiesExcludesSecrets(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("A", "1"),
+                new PasswordParameterDefinition("SECRET", "hunter2", null)));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "", true, false, false, true), null);
+
+        assertTrue(line(run).contains(" /p:A=1 "), line(run));
+        assertFalse(line(run).contains("hunter2"), line(run));
+    }
+
+    @Test
+    void trailingBackslashesBeforeClosingQuoteAreDoubled() {
+        assertEquals("\"/p:OutDir=C:\\a b\\\\\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\"/p:OutDir=C:\\a b\\\""));
+        assertEquals("\"a b\\\\\\\\\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\"a b\\\\\""));
+        assertEquals("\"a b\"", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("\"a b\""));
+        assertEquals("C:\\out\\", MsBuildBuilder.doubleBackslashesBeforeClosingQuote("C:\\out\\"));
+    }
+
+    @Test
+    @WithJenkins
+    void outDirWithTrailingBackslash(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, "x.sln",
+                "/p:Configuration=Release;OutDir=C:\\out\\ \"/p:Docs=C:\\a b\\\" /p:Plain=bin\\", false, false, false, true));
+
+        // msbuild.exe reads \\" as \ followed by the closing quote
+        assertEquals(windows("\"msbuild.exe", "\"/p:Configuration=Release;OutDir=C:\\out\\\\\"",
+                "\"/p:Docs=C:\\a b\\\\\"", "/p:Plain=bin\\", "x.sln", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void quotedOrBlankProjectFile(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, "\"C:\\a b\\x.sln\"", "", false, false, false, true));
+        assertEquals(windows("\"msbuild.exe", "\"C:\\a b\\x.sln\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("F", " ")));
+        run = run(r, p, new MsBuildBuilder(null, "${F}", "", false, false, false, true), null);
+        assertEquals(windows("\"msbuild.exe", "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void parameterValueStaysOneArgument(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("VERSION", "1 -logger:X,\\\\host\\evil.dll"),
+                new StringParameterDefinition("NOTE", "a\r\nb"), new StringParameterDefinition("EMPTY", "")));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "/p:V=${VERSION} /p:N=${NOTE} ${EMPTY} /m",
+                false, false, false, true), null);
+
+        assertEquals(windows("\"msbuild.exe", "\"/p:V=1 -logger:X,\\\\host\\evil.dll\"", "\"/p:N=a b\"", "/m",
+                "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void secretsInArgumentsAreMaskedInLog(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new PasswordParameterDefinition("SECRET", "hunter2", null)));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "/p:Token=${SECRET} /m", false, false, false, true), null);
+
+        assertTrue(line(run).contains(" /p:Token=hunter2 "), "msbuild still gets the value");
+        r.assertLogNotContains("hunter2", run.build);
+        r.assertLogContains("****** /m", run.build);
+    }
+
+    @Test
+    void referencesAny() {
+        Set<String> secrets = Set.of("SECRET");
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=${SECRET}", secrets));
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=$SECRET", secrets));
+        assertFalse(MsBuildBuilder.referencesAny("/p:T=${SECRETS} $OTHER", secrets));
+    }
+
+    @Test
+    @WithJenkins
+    void shortSecretDoesNotMaskOtherArguments(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new PasswordParameterDefinition("PIN", "1", null)));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "/p:Pin=${PIN} /p:A=1 /m:1", false, false, false, true),
+                null);
+
+        r.assertLogContains("****** /p:A=1 /m:1", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void secretInProjectFileIsMasked(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new PasswordParameterDefinition("TOKEN", "hunter2", null)));
+        Run run = run(r, p, new MsBuildBuilder(null, "\\\\srv\\${TOKEN}\\app.sln", "", false, false, false, true),
+                null);
+
+        assertTrue(line(run).contains("hunter2"), "msbuild still gets the value");
+        r.assertLogNotContains("hunter2", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void parameterValuesCannotInjectCommands(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("A", "x&calc"), new StringParameterDefinition("B", "%PATH%")));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "/p:C=${A}|more", true, false, false, true), null);
+
+        // quoted, so cmd.exe passes & and | through; %"P"ATH% is not expanded, msbuild drops the quotes
+        assertTrue(line(run).contains(" \"/p:C=x&calc|more\" "), line(run));
+        assertTrue(line(run).contains(" \"/p:A=x&calc;B=%\"P\"ATH%\" "), line(run));
+    }
+
+    @Test
+    @WithJenkins
+    void buildVariablesAsPropertiesWithoutVariablesAddsNothing(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", true, false, false, true));
+
+        assertFalse(String.join(" ", run.launcher.lastCommand()).contains("/p:"));
+    }
+
+    @Test
+    @WithJenkins
+    void buildVariablesAsPropertiesJoinsAllVariables(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("A", "1"), new StringParameterDefinition("B", "2")));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "", true, false, false, true), null);
+
+        assertTrue(line(run).contains(" \"/p:A=1;B=2\" "), line(run));
+    }
+
+    @Test
+    @WithJenkins
+    void runsInModuleRootWhenProjectFileExists(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.getBuildersList().add(new TestBuilder() {
+            @Override
+            public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+                    throws IOException, InterruptedException {
+                build.getWorkspace().child("app.sln").write("", "UTF-8");
+                return true;
+            }
+        });
+        Run run = run(r, p, new MsBuildBuilder(null, "app.sln", "", false, false, false, true), null);
+
+        assertEquals(run.build.getModuleRoot(), run.launcher.dirs.get(0));
+    }
+
+    @Test
+    @WithJenkins
+    void runsInWorkspaceWhenProjectFileIsMissing(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, "missing.sln", "", false, false, false, true));
+
+        assertEquals(run.build.getWorkspace(), run.launcher.dirs.get(0));
+    }
+
+    @Test
+    @WithJenkins
+    void nonZeroExitFailsBuild(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, false, true), l -> l.exitCode = 1);
+
+        r.assertBuildStatus(Result.FAILURE, run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void continueOnBuildFailure(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, true, false, true), l -> l.exitCode = 1);
+
+        r.assertBuildStatusSuccess(run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void unstableIfWarnings(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, true, true),
+                l -> l.output = "Foo.cs(1,2): warning CS0168: unused\nBuild succeeded.\n    1 Warning(s)\n    0 Error(s)\n");
+
+        r.assertBuildStatus(Result.UNSTABLE, run.build);
+        r.assertLogContains("> Set build UNSTABLE because there are warnings.", run.build);
+        r.assertLogContains("    1 Warning(s)", run.build);
+        try (InputStream log = run.build.getLogInputStream()) {
+            assertTrue(new String(log.readAllBytes(), StandardCharsets.UTF_8).contains(ConsoleNote.PREAMBLE_STR),
+                    "output goes through the annotator");
+        }
+    }
+
+    @Test
+    @WithJenkins
+    void unstableIfWarningsWithoutSummary(JenkinsRule r) throws Exception {
+        // /clp:NoSummary or a localized summary ("1 Warnung(en)")
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, true, true),
+                l -> l.output = "Foo.cs(1,2): warning CS0168: unused\n    1 Warnung(en)\n");
+
+        r.assertBuildStatus(Result.UNSTABLE, run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void lastLineWithoutNewlineIsProcessed(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, true, true),
+                l -> l.output = "Build succeeded.\n    2 Warning(s)");
+
+        r.assertBuildStatus(Result.UNSTABLE, run.build);
+        r.assertLogContains("    2 Warning(s)", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void warningsAreIgnoredUnlessRequested(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, false, true),
+                l -> l.output = "    1 Warning(s)\n");
+
+        r.assertBuildStatusSuccess(run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void unstableIfWarningsStaysSuccessWithoutWarnings(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, true, true),
+                l -> l.output = "    0 Warning(s)\n");
+
+        r.assertBuildStatusSuccess(run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void unixAgentIsReported(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, false, false, false), l -> l.unix = true);
+
+        r.assertBuildStatus(Result.FAILURE, run.build);
+        r.assertLogContains("Unable to use this plugin on this kind of operation system", run.build);
+        assertTrue(run.launcher.commands.isEmpty());
+    }
+
+    @Test
+    @WithJenkins
+    void launchFailureFailsBuild(JenkinsRule r) throws Exception {
+        Run run = run(r, new MsBuildBuilder(null, null, "", false, true, false, true),
+                l -> l.failure = new IOException("boom"));
+
+        // continueOnBuildFailure does not mask a launch failure
+        r.assertBuildStatus(Result.FAILURE, run.build);
+    }
+
+    // --- helpers ------------------------------------------------------------
+
+    private static MsBuildBuilder.DescriptorImpl descriptor(JenkinsRule r) {
+        return r.jenkins.getDescriptorByType(MsBuildBuilder.DescriptorImpl.class);
+    }
+
+    /** The command as launched: everything after {@code /C} is one argument. */
+    private static List<String> windows(String... parts) {
+        return List.of("cmd.exe", "/C", String.join(" ", parts));
+    }
+
+    private static String line(Run run) {
+        List<String> cmd = run.launcher.lastCommand();
+        assertEquals(3, cmd.size(), cmd.toString());
+        return cmd.get(2);
+    }
+
+    private record Run(FreeStyleBuild build, RecordingLauncher launcher) {
+    }
+
+    private interface Setup {
+        void apply(RecordingLauncher launcher);
+    }
+
+    private static Run run(JenkinsRule r, MsBuildBuilder builder) throws Exception {
+        return run(r, r.createFreeStyleProject(), builder, null);
+    }
+
+    private static Run run(JenkinsRule r, MsBuildBuilder builder, Setup setup) throws Exception {
+        return run(r, r.createFreeStyleProject(), builder, setup);
+    }
+
+    private static Run run(JenkinsRule r, MsBuildBuilder builder, Setup setup, Charset charset) throws Exception {
+        return run(r, r.createFreeStyleProject(), builder, setup, charset);
+    }
+
+    private static Run run(JenkinsRule r, FreeStyleProject p, MsBuildBuilder builder, Setup setup) throws Exception {
+        return run(r, p, builder, setup, null);
+    }
+
+    /** Runs {@code builder} inside a real build, but with a launcher that only records the command. */
+    private static Run run(JenkinsRule r, FreeStyleProject p, MsBuildBuilder builder, Setup setup, Charset charset)
+            throws Exception {
+        RecordingLauncher[] launcher = new RecordingLauncher[1];
+        Builder wrapper = new TestBuilder() {
+            @Override
+            public boolean perform(AbstractBuild<?, ?> build, Launcher l, BuildListener listener)
+                    throws InterruptedException, IOException {
+                launcher[0] = new RecordingLauncher(listener);
+                if (setup != null) {
+                    setup.apply(launcher[0]);
+                }
+                AbstractBuild<?, ?> b = build;
+                if (charset != null) {
+                    b = org.mockito.Mockito.spy(build);
+                    org.mockito.Mockito.doReturn(charset).when(b).getCharset();
+                }
+                return builder.perform(b, launcher[0], listener);
+            }
+        };
+        p.getBuildersList().add(wrapper);
+        ParametersDefinitionProperty params = p.getProperty(ParametersDefinitionProperty.class);
+        FreeStyleBuild build = params == null
+                ? p.scheduleBuild2(0).get()
+                : p.scheduleBuild2(0, new ParametersAction(params.getParameterDefinitions().stream()
+                        .map(d -> d.getDefaultParameterValue()).toList())).get();
+        return new Run(build, launcher[0]);
     }
 }

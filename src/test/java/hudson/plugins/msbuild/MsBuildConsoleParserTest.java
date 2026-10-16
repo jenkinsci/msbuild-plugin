@@ -3,69 +3,95 @@ package hudson.plugins.msbuild;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class MsBuildConsoleParserTest {
 
-    private OutputStream mockOutputStream;
+    private ByteArrayOutputStream out;
     private MsBuildConsoleParser parser;
 
     @BeforeEach
     void setUp() {
-        mockOutputStream = mock(OutputStream.class);
-        parser = new MsBuildConsoleParser(mockOutputStream, StandardCharsets.UTF_8);
+        out = new ByteArrayOutputStream();
+        parser = new MsBuildConsoleParser(out, StandardCharsets.UTF_8);
+    }
+
+    private void feed(String... lines) throws IOException {
+        for (String line : lines) {
+            parser.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+        }
+        parser.flush();
     }
 
     @Test
-    void testGetNumberOfWarnings() throws Exception {
-        String line = "    1 Warning(s)";
-        parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
+    void countsAreMinusOneUntilSummaryIsSeen() throws IOException {
+        feed("Build started.", "Project \"a.sln\" on node 1 (default targets).");
 
-        assertEquals(1, parser.getNumberOfWarnings(), "Number of warnings should match");
+        assertEquals(-1, parser.getNumberOfWarnings());
+        assertEquals(-1, parser.getNumberOfErrors());
     }
 
     @Test
-    void testGetNumberOfErrors() throws Exception {
-        String line = "    1 Error(s)";
-        parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
+    void parsesMsBuildSummary() throws IOException {
+        feed("Build succeeded.", "    3 Warning(s)", "    5 Error(s)");
 
-        assertEquals(1, parser.getNumberOfErrors(), "Number of errors should match");
+        assertEquals(3, parser.getNumberOfWarnings());
+        assertEquals(5, parser.getNumberOfErrors());
     }
 
     @Test
-    void testGetNumberOfWarningsAndErrors() throws Exception {
-        String line1 = "    3 Warning(s)";
-        String line2 = "    5 Error(s)";
-        parser.eol(line1.getBytes(StandardCharsets.UTF_8), line1.length());
-        parser.eol(line2.getBytes(StandardCharsets.UTF_8), line2.length());
+    void parsesSummaryRegardlessOfIndentation() throws IOException {
+        feed("1 Warning(s)", "\t\t12 Error(s)");
 
-        assertEquals(3, parser.getNumberOfWarnings(), "Number of warnings should match");
-        assertEquals(5, parser.getNumberOfErrors(), "Number of errors should match");
+        assertEquals(1, parser.getNumberOfWarnings());
+        assertEquals(12, parser.getNumberOfErrors());
     }
 
     @Test
-    void testInvalidWarningCount() throws Exception {
-        String line = "    Warnings: not a number";
-        parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
+    void parsesCountEmbeddedInOtherText() throws IOException {
+        // used to throw ArrayIndexOutOfBoundsException
+        feed("Build succeeded. 7 Warning(s)", "Done: 2 Error(s) found");
 
-        assertEquals(-1, parser.getNumberOfWarnings(), "Number of warnings should be -1");
+        assertEquals(7, parser.getNumberOfWarnings());
+        assertEquals(2, parser.getNumberOfErrors());
     }
 
     @Test
-    void testInvalidErrorCount() throws Exception {
-        String line = "    Errors: not a number";
-        parser.eol(line.getBytes(StandardCharsets.UTF_8), line.length());
+    void lastSummaryWins() throws IOException {
+        feed("    4 Warning(s)", "    0 Warning(s)");
 
-        assertEquals(-1, parser.getNumberOfErrors(), "Number of errors should be -1");
+        assertEquals(0, parser.getNumberOfWarnings());
     }
 
     @Test
-    void testClose() throws Exception {
-        parser.close();
-        verify(mockOutputStream, times(1)).close();
+    void countTooLargeForIntIsIgnored() throws IOException {
+        feed("    2 Warning(s)", "    99999999999 Warning(s)", "    99999999999 Error(s)");
+
+        assertEquals(2, parser.getNumberOfWarnings());
+        assertEquals(-1, parser.getNumberOfErrors());
+    }
+
+    @Test
+    void passesOutputThroughUnchanged() throws IOException {
+        String log = "line one\r\n    1 Warning(s)\nline three\n";
+        parser.write(log.getBytes(StandardCharsets.UTF_8));
+        parser.flush();
+
+        assertEquals(log, out.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void closeClosesWrappedStream() throws IOException {
+        OutputStream wrapped = mock(OutputStream.class);
+        new MsBuildConsoleParser(wrapped, StandardCharsets.UTF_8).close();
+
+        verify(wrapped).close();
     }
 }
