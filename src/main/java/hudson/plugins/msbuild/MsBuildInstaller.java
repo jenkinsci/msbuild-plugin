@@ -60,6 +60,9 @@ public class MsBuildInstaller extends ToolInstaller {
     /** Delay before retrying while another installation is running; tests set it to 0. */
     static long installerRetryMillis = 30000;
 
+    /** Parent of the default Build Tools folders; tests point it to a temporary directory. */
+    static String visualStudioRoot = "C:\\Program Files (x86)\\Microsoft Visual Studio\\";
+
     private String selectedVersion;
     private String additionalArguments;
     private String vsconfig;
@@ -166,6 +169,10 @@ public class MsBuildInstaller extends ToolInstaller {
             String[] requiredArgs = { "--quiet", "--wait", "--norestart" };
             ArgumentListBuilder installArguments = new ArgumentListBuilder()
                     .addTokenized(ensureArguments(givenArguments, requiredArgs));
+            if (extractInstallPath(givenArguments) == null) {
+                // pin the default, so MSBuild.exe is found where the installer put it
+                installArguments.add("--installPath", installPath);
+            }
             if (config != null) {
                 installArguments.add("--config", configPath);
             }
@@ -221,7 +228,8 @@ public class MsBuildInstaller extends ToolInstaller {
     public static FilePath buildToolsInstallPath(Node node, String selectedVersion, String givenInstallPath) {
         return new FilePath(node.getChannel(),
                 Objects.requireNonNullElseGet(Util.fixEmpty(givenInstallPath),
-                        () -> "C:\\Program Files (x86)\\Microsoft Visual Studio\\" + selectedVersion + "\\BuildTools\\"));
+                        () -> visualStudioRoot + DescriptorImpl.folderForVersion(selectedVersion)
+                                + "\\BuildTools\\"));
     }
 
     /**
@@ -259,8 +267,10 @@ public class MsBuildInstaller extends ToolInstaller {
      */
     public static String extractInstallPath(String givenArguments) {
         if (givenArguments != null) {
-            // Use a regex to find the --installPath followed by a quoted string or a single word
-            Pattern pattern = Pattern.compile("--installPath\\s+\"([^\"]*)\"|--installPath\\s+(\\S+)");
+            // --installPath <dir> or its documented equivalent --path install=<dir>, quoted or a single word;
+            // the installer treats all parameters case-insensitively
+            Pattern pattern = Pattern.compile("(?:--installPath\\s+|--path\\s+install=)(?:\"([^\"]*)\"|(\\S+))",
+                    Pattern.CASE_INSENSITIVE);
             Matcher matcher = pattern.matcher(givenArguments);
 
             if (matcher.find()) {
@@ -392,24 +402,32 @@ public class MsBuildInstaller extends ToolInstaller {
     @Extension
     public static final class DescriptorImpl extends ToolInstallerDescriptor<MsBuildInstaller> {
 
-        static final Map<String, String> VERSION_URL_MAP = new HashMap<>();
-
-        static {
-            VERSION_URL_MAP.put("2022",
-                    "https://aka.ms/vs/17/release/vs_buildtools.exe");
-            VERSION_URL_MAP.put("2019",
-                    "https://aka.ms/vs/16/release/vs_buildtools.exe");
+        /** A Build Tools release: its bootstrapper and its folder under {@code Microsoft Visual Studio}. */
+        record Release(String url, String folder) {
         }
 
+        // from 2026 on the channel is "stable" and the folder is the major version, not the year
+        static final Map<String, Release> RELEASES = new HashMap<>(Map.of(
+                "2026", new Release("https://aka.ms/vs/18/stable/vs_buildtools.exe", "18"),
+                "2022", new Release("https://aka.ms/vs/17/release/vs_buildtools.exe", "2022"),
+                "2019", new Release("https://aka.ms/vs/16/release/vs_buildtools.exe", "2019")));
+
         public static String getUrlForVersion(String version) {
-            return VERSION_URL_MAP.get(version);
+            Release release = RELEASES.get(version);
+            return release == null ? null : release.url();
+        }
+
+        /** Unknown versions keep their name as folder, the install fails on the missing URL anyway. */
+        static String folderForVersion(String version) {
+            Release release = RELEASES.get(version);
+            return release == null ? version : release.folder();
         }
 
         @RequirePOST
         public ListBoxModel doFillSelectedVersionItems() {
             Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             ListBoxModel items = new ListBoxModel();
-            List<String> versions = new ArrayList<>(VERSION_URL_MAP.keySet());
+            List<String> versions = new ArrayList<>(RELEASES.keySet());
             versions.sort(Collections.reverseOrder());
             for (String version : versions) {
                 items.add("Build Tools " + version, version);
