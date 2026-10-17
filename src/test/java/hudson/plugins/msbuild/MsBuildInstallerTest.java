@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -91,6 +93,14 @@ class MsBuildInstallerTest {
         assertEquals(tmp.resolve("MSBuild").resolve("Current").resolve("Bin").toString(), bin.getRemote());
         assertEquals(MsBuildInstaller.buildToolsInstallPath(node, "2019", null).child("\\MSBuild\\Current\\Bin"),
                 MsBuildInstaller.msBuildBinPath(node, "2019", ""), "empty path falls back to the default location");
+    }
+
+    @Test
+    void msBuildBinPathIs64BitFor2026() {
+        Node node = mock(Node.class);
+        FilePath bin = MsBuildInstaller.msBuildBinPath(node, "2026", tmp.toString());
+        assertEquals(tmp.resolve("MSBuild").resolve("Current").resolve("Bin").resolve("amd64").toString(),
+                bin.getRemote());
     }
 
     @Test
@@ -204,7 +214,7 @@ class MsBuildInstallerTest {
             msBuildExe = new FilePath(installDir.toFile()).child("MSBuild").child("Current").child("Bin")
                     .child("MSBuild.exe");
             MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
-                    new MsBuildInstaller.DescriptorImpl.Release(serve(new byte[] {42}), "test"));
+                    new MsBuildInstaller.DescriptorImpl.Release(serve(new byte[] {42}), "test", "\\MSBuild\\Current\\Bin"));
             installer.setSelectedVersion("test");
             installer.setAdditionalArguments("--installPath \"" + installDir + "\"");
         }
@@ -300,6 +310,59 @@ class MsBuildInstallerTest {
 
         assertEquals(List.of("--quiet", "--wait", "--norestart", "--installPath", defaultPath),
                 install.arguments(0));
+    }
+
+    /** Uses {@code bin} below the default Bin folder as the release's MSBuild folder. */
+    private static void releaseBin(String bin) {
+        String url = MsBuildInstaller.DescriptorImpl.getUrlForVersion("test");
+        MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
+                new MsBuildInstaller.DescriptorImpl.Release(url, "test", "\\MSBuild\\Current\\Bin" + bin));
+    }
+
+    @Test
+    void x64ReleaseUsesNativeMSBuildOnArm64() throws Exception {
+        Install install = new Install();
+        releaseBin("\\amd64");
+        FilePath bin = install.msBuildExe.getParent();
+        install.installed("", 1);
+        bin.child("amd64").child("MSBuild.exe").write("", "UTF-8");
+        // only Arm64 machines get Bin\arm64
+        bin.child("arm64").child("MSBuild.exe").write("", "UTF-8");
+
+        assertEquals(bin.child("arm64"), install.run());
+        assertTrue(install.launcher.commands.isEmpty());
+    }
+
+    @Test
+    void x64ReleaseUsesNativeMSBuildOnArm64AfterInstall() throws Exception {
+        Install install = new Install();
+        releaseBin("\\amd64");
+        FilePath bin = install.msBuildExe.getParent();
+        bin.child("arm64").child("MSBuild.exe").write("", "UTF-8");
+
+        assertEquals(bin.child("arm64"), install.run());
+        assertEquals(1, install.launcher.commands.size());
+    }
+
+    @Test
+    void x64ReleaseKeepsAmd64OnX64() throws Exception {
+        Install install = new Install();
+        releaseBin("\\amd64");
+        FilePath bin = install.msBuildExe.getParent();
+        install.installed("", 1);
+        bin.child("amd64").child("MSBuild.exe").write("", "UTF-8");
+
+        assertEquals(bin.child("amd64"), install.run());
+    }
+
+    @Test
+    void x86ReleaseIgnoresArm64() throws Exception {
+        Install install = new Install();
+        FilePath bin = install.msBuildExe.getParent();
+        install.installed("", 1);
+        bin.child("arm64").child("MSBuild.exe").write("", "UTF-8");
+
+        assertEquals(bin, install.run(), "existing 2019/2022 jobs are not switched");
     }
 
     @Test
@@ -428,7 +491,7 @@ class MsBuildInstallerTest {
         });
         String shortUrl = install.serverUrl("/short");
         MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
-                new MsBuildInstaller.DescriptorImpl.Release(shortUrl, "test"));
+                new MsBuildInstaller.DescriptorImpl.Release(shortUrl, "test", "\\MSBuild\\Current\\Bin"));
 
         install.run();
 
@@ -522,7 +585,7 @@ class MsBuildInstallerTest {
     void invalidUrlRaisesIOException() throws Exception {
         Install install = new Install();
         MsBuildInstaller.DescriptorImpl.RELEASES.put("test",
-                new MsBuildInstaller.DescriptorImpl.Release("not a uri", "test"));
+                new MsBuildInstaller.DescriptorImpl.Release("not a uri", "test", "\\MSBuild\\Current\\Bin"));
 
         IOException e = assertThrows(IOException.class, install::run);
         assertEquals("Invalid URI: not a uri", e.getMessage());
@@ -549,10 +612,11 @@ class MsBuildInstallerTest {
         assertEquals(20, install.launcher.commands.size());
     }
 
-    @Test
-    void rebootRequiredCountsAsSuccess() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {3010, 1641})
+    void rebootCountsAsSuccess(int exitCode) throws Exception {
         Install install = new Install();
-        install.launcher.exitCode = 3010;
+        install.launcher.exitCode = exitCode;
 
         install.run();
 

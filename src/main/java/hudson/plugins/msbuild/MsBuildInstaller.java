@@ -45,7 +45,8 @@ public class MsBuildInstaller extends ToolInstaller {
     // Exit codes of the Visual Studio installer, see
     // https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio#error-codes
     private static final int EXIT_SUCCESS = 0;
-    private static final int EXIT_REBOOT_REQUIRED = 3010;
+    /** Success, but a reboot is required (3010) or was initiated (1641). */
+    private static final Set<Integer> EXIT_REBOOT = Set.of(3010, 1641);
     /** Installer running (1001), Visual Studio in use (1003), another installation (1618), VS processes (8006). */
     private static final Set<Integer> EXIT_BUSY = Set.of(1001, 1003, 1618, 8006);
     private static final int MAX_ATTEMPTS = 20;
@@ -141,7 +142,7 @@ public class MsBuildInstaller extends ToolInstaller {
         boolean outdated = applied == null
                 || System.currentTimeMillis() - marker.lastModified() > UPDATE_INTERVAL_MILLIS;
         if (installed && !configChanged && !outdated) {
-            return msBuildBinPath;
+            return nativeBinPath(msBuildBinPath);
         }
         String url = DescriptorImpl.getUrlForVersion(selectedVersion);
         if (url == null) {
@@ -198,7 +199,7 @@ public class MsBuildInstaller extends ToolInstaller {
         marker.write(config == null ? "" : config, "UTF-8");
         // set by the controller's clock, which is also the one it is compared with
         marker.touch(System.currentTimeMillis());
-        return msBuildBinPath;
+        return nativeBinPath(msBuildBinPath);
     }
 
     private static void download(URI uri, FilePath target, TaskListener log)
@@ -244,7 +245,14 @@ public class MsBuildInstaller extends ToolInstaller {
      * @return FilePath
      */
     public static FilePath msBuildBinPath(Node node, String selectedVersion, String givenInstallPath) {
-        return buildToolsInstallPath(node, selectedVersion, givenInstallPath).child("\\MSBuild\\Current\\Bin");
+        return buildToolsInstallPath(node, selectedVersion, givenInstallPath)
+                .child(DescriptorImpl.binForVersion(selectedVersion));
+    }
+
+    /** {@code Bin\arm64} is only installed on Arm64 machines, where it replaces the emulated 64-bit MSBuild. */
+    private static FilePath nativeBinPath(FilePath bin) throws IOException, InterruptedException {
+        FilePath arm64 = bin.sibling("arm64");
+        return bin.getName().equals("amd64") && arm64.child("MSBuild.exe").exists() ? arm64 : bin;
     }
 
     /**
@@ -333,8 +341,9 @@ public class MsBuildInstaller extends ToolInstaller {
             if (result == EXIT_SUCCESS) {
                 return;
             }
-            if (result == EXIT_REBOOT_REQUIRED) {
-                log.getLogger().println("Visual Studio Build Tools installed; a reboot is required to complete it");
+            if (EXIT_REBOOT.contains(result)) {
+                log.getLogger().println(
+                        "Visual Studio Build Tools installed; a reboot is required or was initiated to complete it");
                 return;
             }
             if (EXIT_BUSY.contains(result) && attempt < MAX_ATTEMPTS) {
@@ -402,15 +411,22 @@ public class MsBuildInstaller extends ToolInstaller {
     @Extension
     public static final class DescriptorImpl extends ToolInstallerDescriptor<MsBuildInstaller> {
 
-        /** A Build Tools release: its bootstrapper and its folder under {@code Microsoft Visual Studio}. */
-        record Release(String url, String folder) {
+        /**
+         * A Build Tools release: its bootstrapper, its folder under {@code Microsoft Visual Studio} and the
+         * MSBuild.exe folder below that.
+         */
+        record Release(String url, String folder, String bin) {
         }
 
-        // from 2026 on the channel is "stable" and the folder is the major version, not the year
+        private static final String BIN_X86 = "\\MSBuild\\Current\\Bin";
+        private static final String BIN_X64 = BIN_X86 + "\\amd64";
+
+        // from 2026 on the channel is "stable" and the folder is the major version, not the year;
+        // 2026 also uses the 64-bit MSBuild, older releases keep the 32-bit one existing jobs were built with
         static final Map<String, Release> RELEASES = new HashMap<>(Map.of(
-                "2026", new Release("https://aka.ms/vs/18/stable/vs_buildtools.exe", "18"),
-                "2022", new Release("https://aka.ms/vs/17/release/vs_buildtools.exe", "2022"),
-                "2019", new Release("https://aka.ms/vs/16/release/vs_buildtools.exe", "2019")));
+                "2026", new Release("https://aka.ms/vs/18/stable/vs_buildtools.exe", "18", BIN_X64),
+                "2022", new Release("https://aka.ms/vs/17/release/vs_buildtools.exe", "2022", BIN_X86),
+                "2019", new Release("https://aka.ms/vs/16/release/vs_buildtools.exe", "2019", BIN_X86)));
 
         public static String getUrlForVersion(String version) {
             Release release = RELEASES.get(version);
@@ -421,6 +437,11 @@ public class MsBuildInstaller extends ToolInstaller {
         static String folderForVersion(String version) {
             Release release = RELEASES.get(version);
             return release == null ? version : release.folder();
+        }
+
+        static String binForVersion(String version) {
+            Release release = RELEASES.get(version);
+            return release == null ? BIN_X86 : release.bin();
         }
 
         @RequirePOST
