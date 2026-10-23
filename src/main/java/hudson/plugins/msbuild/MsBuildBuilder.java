@@ -42,6 +42,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.nio.charset.Charset;
 
 /**
@@ -50,6 +53,9 @@ import java.nio.charset.Charset;
 public class MsBuildBuilder extends Builder {
 
     private static final Map<String, Integer> CHARSET_CODE_MAP = new HashMap<>();
+    /** cmd.exe variable reference like {@code %JOB_BASE_NAME%}, {@code %NAME:~0,8%} or {@code %NAME:a=b%}. */
+    private static final Pattern WINDOWS_VARIABLE = Pattern.compile("%([^%\r\n:]+)(?::([^%\r\n]*))?%");
+    private static final Pattern SUBSTRING = Pattern.compile("~(-?\\d{1,9})(?:,(-?\\d{1,9}))?");
 
     static {
         CHARSET_CODE_MAP.put("UTF-8", 65001);
@@ -264,7 +270,15 @@ public class MsBuildBuilder extends Builder {
             args.add(pathToMsBuild);
 
             if (ai.getDefaultArgs() != null) {
-                args.add(tokenizeArgs(ai.getDefaultArgs()));
+                // cmd.exe expanded %NAME% here before the command quoted %, ${NAME} never was
+                Set<String> secrets = build.getSensitiveBuildVariables();
+                for (String template : tokenizeArgs(ai.getDefaultArgs())) {
+                    String arg = expandWindowsVariables(template, env, UnaryOperator.identity())
+                            .replaceAll("[\r\n]+", " ");
+                    if (!arg.isEmpty()) {
+                        args.add(arg, referencesAny(template, secrets));
+                    }
+                }
             }
         }
 
@@ -397,11 +411,21 @@ public class MsBuildBuilder extends Builder {
     }
 
     /**
-     * Whether {@code template} uses one of {@code names} as {@code $NAME} or {@code ${NAME}}. Masking by the
-     * template instead of by the value keeps a short secret like "1" from masking every argument containing a 1.
+     * Whether {@code template} uses one of {@code names} as {@code $NAME}, {@code ${NAME}} or {@code %NAME%}. Masking
+     * by the template instead of by the value keeps a short secret like "1" from masking every argument containing a 1.
      */
     static boolean referencesAny(String template, Set<String> names) {
         boolean[] found = {false};
+        // which % pairs up depends on which names exist, so try every % as the start of a variable
+        Matcher m = WINDOWS_VARIABLE.matcher(template);
+        for (int i = template.indexOf('%'); i >= 0 && !found[0]; i = template.indexOf('%', i + 1)) {
+            if (m.region(i, template.length()).lookingAt()) {
+                String name = m.group(1);
+                // cmd.exe names are case-insensitive, %secret% expands a SECRET too
+                // ponytail: %${X}% names a variable only known at build time, so any secret masks it
+                found[0] = names.stream().anyMatch(name::equalsIgnoreCase) || name.contains("$") && !names.isEmpty();
+            }
+        }
         Util.replaceMacro(template, name -> {
             found[0] |= names.contains(name);
             return null;
@@ -501,10 +525,79 @@ public class MsBuildBuilder extends Builder {
         return tokens.toArray(new String[0]);
     }
 
-    /** Expands environment and build variables; a line break would end the cmd.exe command line. */
+    /**
+     * Expands environment and build variables; a line break would end the cmd.exe command line. Values are not
+     * expanded again: {@code %} in a {@code ${NAME}} value and {@code $} in a {@code %NAME%} value stay as they are.
+     */
     private static String expand(String template, EnvVars env, AbstractBuild<?, ?> build) {
-        String expanded = Util.replaceMacro(Util.replaceMacro(template, env), build.getBuildVariables());
+        String expanded = expandWindowsVariables(template, env,
+                text -> Util.replaceMacro(Util.replaceMacro(text, env), build.getBuildVariables()));
         return expanded.replaceAll("[\r\n]+", " ");
+    }
+
+    /**
+     * Expands {@code %NAME%}, {@code %NAME:~start,length%} and {@code %NAME:find=replace%} like cmd.exe, which
+     * cannot do it itself because the command quotes {@code %}. Unknown names stay as cmd.exe leaves them. The text
+     * around the variables and {@code ${NAME}} inside them, but not their values, goes through {@code text}.
+     */
+    static String expandWindowsVariables(String template, EnvVars env, UnaryOperator<String> text) {
+        StringBuilder result = new StringBuilder();
+        Matcher m = WINDOWS_VARIABLE.matcher(template);
+        int literal = 0;
+        int from = 0;
+        while (m.find(from)) {
+            // ${NAME} was expanded before cmd.exe saw %${NAME}%
+            String value = env.get(expandName(m.group(1), text));
+            String edited = value == null ? null : editWindowsVariable(value, expandName(m.group(2), text));
+            if (edited == null) {
+                // cmd.exe keeps %NAME and starts the next variable at the closing %
+                from = m.end() - 1;
+            } else {
+                result.append(text.apply(template.substring(literal, m.start()))).append(edited);
+                literal = from = m.end();
+            }
+        }
+        return result.append(text.apply(template.substring(literal))).toString();
+    }
+
+    private static String expandName(String name, UnaryOperator<String> text) {
+        return name == null || !name.contains("$") ? name : text.apply(name);
+    }
+
+    /** Applies the part after {@code :}, or returns null if cmd.exe would not understand it. */
+    private static String editWindowsVariable(String value, String modifier) {
+        if (modifier == null) {
+            return value;
+        }
+        Matcher substring = SUBSTRING.matcher(modifier);
+        if (substring.matches()) {
+            int length = value.length();
+            int offset = Integer.parseInt(substring.group(1));
+            int start = offset < 0 ? Math.max(0, length + offset) : Math.min(offset, length);
+            int end = length;
+            if (substring.group(2) != null) {
+                int count = Integer.parseInt(substring.group(2));
+                // a negative length leaves out that many characters at the end
+                end = count < 0 ? length + count : (int) Math.min(length, (long) start + count);
+            }
+            return end <= start ? "" : value.substring(start, end);
+        }
+        int equals = modifier.indexOf('=');
+        if (equals < 1) {
+            return null;
+        }
+        String find = modifier.substring(0, equals);
+        String replace = modifier.substring(equals + 1);
+        if (find.startsWith("*")) {
+            // *find replaces everything up to and including the first match
+            Matcher first = ignoringCase(find.substring(1)).matcher(value);
+            return find.length() == 1 || !first.find() ? value : replace + value.substring(first.end());
+        }
+        return ignoringCase(find).matcher(value).replaceAll(Matcher.quoteReplacement(replace));
+    }
+
+    private static Pattern ignoringCase(String literal) {
+        return Pattern.compile(Pattern.quote(literal), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     }
 
     @Extension

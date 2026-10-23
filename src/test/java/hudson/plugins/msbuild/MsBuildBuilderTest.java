@@ -1,5 +1,6 @@
 package hudson.plugins.msbuild;
 
+import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.console.ConsoleNote;
 import hudson.model.AbstractBuild;
@@ -12,6 +13,7 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.PasswordParameterDefinition;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
+import hudson.model.TextParameterDefinition;
 import hudson.tasks.Builder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,6 +31,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -353,6 +356,81 @@ class MsBuildBuilderTest {
 
     @Test
     @WithJenkins
+    void expandsWindowsVariables(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject("job");
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("B", "%PATH%")));
+        // cmd.exe does not expand the quoted %, so the plugin has to; values and unknown names stay as they are
+        Run run = run(r, p, new MsBuildBuilder(null, "%JOB_BASE_NAME%.sln", "/p:B=%b% /p:U=%NO_SUCH_VAR%",
+                false, false, false, true), null);
+
+        assertEquals(windows("\"msbuild.exe", "\"/p:B=%\"P\"ATH%\"", "\"/p:U=%\"N\"O_SUCH_VAR%\"", "job.sln",
+                "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void expandsWindowsVariablesAsUsersWroteThem(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject("job");
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("ROOT", "C:\\Program Files\\src"),
+                new StringParameterDefinition("SvnBranchName", "trunk"),
+                new StringParameterDefinition("SITE", "Default Web Site"),
+                new StringParameterDefinition("DEST", "C:\\deploy")));
+        // from job configs attached to JENKINS-15029, JENKINS-11069 and JENKINS-7497, including the stray quote
+        Run run = run(r, p, new MsBuildBuilder(null, "\"%root%\\%SvnBranchName%\\wbuilder_%JOB_NAME%_%SvnBranchName%.sln\"",
+                "/t:Clean,Build /property:PublishProfile=Release;DeployIisAppPath=\"%SITE%/services/soap\";"
+                        + "PublishDestination=%DEST%\";VisualStudioVersion=11.0",
+                false, false, false, true), null);
+
+        assertEquals(windows("\"msbuild.exe", "\"/t:Clean,Build\"",
+                "\"/property:PublishProfile=Release;DeployIisAppPath=Default Web Site/services/soap;"
+                        + "PublishDestination=C:\\deploy;VisualStudioVersion=11.0\"",
+                "\"C:\\Program Files\\src\\trunk\\wbuilder_job_trunk.sln\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+                run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void windowsSecretIsMaskedInLog(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new PasswordParameterDefinition("SECRET", "hunter2", null)));
+        Run run = run(r, p, new MsBuildBuilder(null, null, "/p:Token=%secret% /m", false, false, false, true), null);
+
+        assertTrue(line(run).contains(" /p:Token=hunter2 "), "msbuild still gets the value");
+        r.assertLogNotContains("hunter2", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void defaultArgsKeepSecretsAndLineBreaksOutOfTheCommand(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(),
+                "/p:Token=%SECRET% /p:Note=%NOTE%"));
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new PasswordParameterDefinition("SECRET", "hunter2", null),
+                new TextParameterDefinition("NOTE", "a\nwhoami", null)));
+
+        Run run = run(r, p, new MsBuildBuilder("VS", null, "", false, false, false, true), null);
+
+        assertTrue(line(run).contains(" /p:Token=hunter2 \"/p:Note=a whoami\" "), line(run));
+        r.assertLogNotContains("hunter2", run.build);
+    }
+
+    @Test
+    @WithJenkins
+    void expandsWindowsVariablesInDefaultArgs(JenkinsRule r, @TempDir Path dir) throws Exception {
+        Path exe = Files.createFile(dir.resolve("MSBuild.exe"));
+        descriptor(r).setInstallations(new MsBuildInstallation("VS", exe.toString(), Collections.emptyList(),
+                "/p:Name=%JOB_BASE_NAME% %JOB_BASE_NAME:~99% /p:Raw=${JOB_BASE_NAME}"));
+
+        Run run = run(r, new MsBuildBuilder("VS", null, "", false, false, false, true));
+
+        r.assertBuildStatusSuccess(run.build);
+        assertTrue(line(run).contains(" /p:Name=" + run.build.getParent().getName() + " /p:Raw=${JOB_BASE_NAME} "),
+                line(run));
+    }
+
+    @Test
+    @WithJenkins
     void buildVariablesAsPropertiesExcludesSecrets(JenkinsRule r) throws Exception {
         FreeStyleProject p = r.createFreeStyleProject();
         p.addProperty(new ParametersDefinitionProperty(
@@ -449,6 +527,51 @@ class MsBuildBuilderTest {
         assertTrue(MsBuildBuilder.referencesAny("/p:T=${SECRET}", secrets));
         assertTrue(MsBuildBuilder.referencesAny("/p:T=$SECRET", secrets));
         assertFalse(MsBuildBuilder.referencesAny("/p:T=${SECRETS} $OTHER", secrets));
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=%SECRET%", secrets));
+        assertFalse(MsBuildBuilder.referencesAny("/p:T=%SECRETS%", secrets));
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=%secret%", secrets));
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=%Secret:~0,3%", secrets));
+        // %x% may be unknown, then %SECRET% expands
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=%x%SECRET%", secrets));
+        assertTrue(MsBuildBuilder.referencesAny("/p:T=%${NAME}%", secrets));
+        assertFalse(MsBuildBuilder.referencesAny("/p:T=%${NAME}%", Set.of()));
+    }
+
+    @Test
+    void expandWindowsVariables() {
+        assertEquals("MyProject.sln", windowsVariables("%name%.sln"));
+        assertEquals("%NO_SUCH%", windowsVariables("%NO_SUCH%"));
+        assertEquals("%NO_SUCH:~1%", windowsVariables("%NO_SUCH:~1%"));
+        assertEquals("Proj", windowsVariables("%NAME:~2,4%"));
+        assertEquals("ject", windowsVariables("%NAME:~-4%"));
+        assertEquals("MyProj", windowsVariables("%NAME:~0,-3%"));
+        assertEquals("", windowsVariables("%NAME:~20,2%"));
+        assertEquals("", windowsVariables("%NAME:~4,-9%"));
+        assertEquals("MyProject", windowsVariables("%NAME:~-20,99%"));
+        assertEquals("MyApp", windowsVariables("%NAME:project=App%"));
+        assertEquals("Mx$1Project", windowsVariables("%NAME:y=x$1%"));
+        assertEquals("Xject", windowsVariables("%NAME:*pro=X%"));
+        assertEquals("MyProject", windowsVariables("%NAME:*zz=X%"));
+        assertEquals("MyProject", windowsVariables("%NAME:*=X%"));
+        assertEquals("%NAME:=X%", windowsVariables("%NAME:=X%"));
+        assertEquals("%NAME:x%", windowsVariables("%NAME:x%"));
+        assertEquals(".sln", windowsVariables("%EMPTY%.sln"));
+        assertEquals("50%", windowsVariables("50%"));
+        assertEquals("50%;Out=MyProject", windowsVariables("50%;Out=%NAME%"));
+        assertEquals("%NO_SUCH" + "MyProject", windowsVariables("%NO_SUCH%NAME%"));
+        assertEquals("MyProjectNAME%", windowsVariables("%NAME%NAME%"));
+        // only the text around the variables goes through the ${NAME} expansion
+        assertEquals("[a]MyProject[b]", MsBuildBuilder.expandWindowsVariables("a%NAME%b", ENV, t -> "[" + t + "]"));
+        assertEquals("[a%NO_SUCH%b]", MsBuildBuilder.expandWindowsVariables("a%NO_SUCH%b", ENV, t -> "[" + t + "]"));
+        // %${X}% looks up the variable named by X, like cmd.exe after ${X} was expanded
+        UnaryOperator<String> x = t -> t.replace("${X}", "NAME").replace("${N}", "4");
+        assertEquals("MyProject Proj", MsBuildBuilder.expandWindowsVariables("%${X}% %NAME:~2,${N}%", ENV, x));
+    }
+
+    private static final EnvVars ENV = new EnvVars("NAME", "MyProject", "EMPTY", "");
+
+    private static String windowsVariables(String template) {
+        return MsBuildBuilder.expandWindowsVariables(template, ENV, UnaryOperator.identity());
     }
 
     @Test
