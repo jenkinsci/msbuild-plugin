@@ -55,7 +55,9 @@ public class MsBuildBuilder extends Builder {
     private static final Map<String, Integer> CHARSET_CODE_MAP = new HashMap<>();
     /** cmd.exe variable reference like {@code %JOB_BASE_NAME%}, {@code %NAME:~0,8%} or {@code %NAME:a=b%}. */
     private static final Pattern WINDOWS_VARIABLE = Pattern.compile("%([^%\r\n:]+)(?::([^%\r\n]*))?%");
-    private static final Pattern SUBSTRING = Pattern.compile("~(-?\\d{1,9})(?:,(-?\\d{1,9}))?");
+    // quotes that pair up, with no cmd.exe metacharacter and no space outside them, can pass to cmd.exe as they are
+    private static final Pattern LITERAL_QUOTES = Pattern.compile("[^\"\\s&|<>^%]*(?:\"[^\"\r\n&|<>^%]*\"[^\"\\s&|<>^%]*)+");
+    private static final Pattern SUBSTRING =Pattern.compile("~(-?\\d{1,9})(?:,(-?\\d{1,9}))?");
 
     static {
         CHARSET_CODE_MAP.put("UTF-8", 65001);
@@ -368,6 +370,7 @@ public class MsBuildBuilder extends Builder {
         if (codePage != 0) {
             args.prepend("chcp", String.valueOf(codePage), "&");
         }
+        List<String> original = args.toList();
         ArgumentListBuilder quoted = args.toWindowsCommand(true);
         List<String> list = quoted.toList();
         boolean[] mask = quoted.toMaskArray();
@@ -375,6 +378,11 @@ public class MsBuildBuilder extends Builder {
         for (int i = 0; i < list.size(); i++) {
             // [cmd.exe, /C, "chcp, <codePage>, "&", ...]
             String arg = codePage != 0 && i == 4 ? "&" : list.get(i);
+            int j = i - 2;
+            if (j >= 0 && j < original.size() && LITERAL_QUOTES.matcher(original.get(j)).matches()) {
+                // msbuild.exe parses its own command line and takes "" as two quotes, not as one literal quote
+                arg = (j == 0 ? "\"" : "") + original.get(j);
+            }
             result.add(doubleBackslashesBeforeClosingQuote(arg), mask[i]);
         }
         return result;

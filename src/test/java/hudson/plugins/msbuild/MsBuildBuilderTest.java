@@ -468,9 +468,40 @@ class MsBuildBuilderTest {
     void escapedQuotesReachMsBuild(JenkinsRule r) throws Exception {
         Run run = run(r, new MsBuildBuilder(null, null, "/p:DefineConstants=\\\"A;B\\\"", false, false, false, true));
 
-        // "" inside quotes is a literal quote, so msbuild.exe gets /p:DefineConstants="A;B"
-        assertEquals(windows("\"msbuild.exe", "\"/p:DefineConstants=\"\"A;B\"\"\"", "&&", "exit", "%%ERRORLEVEL%%\""),
+        // msbuild.exe reads its own command line and does not take "" as a quote, the ; would split the property
+        assertEquals(windows("\"msbuild.exe", "/p:DefineConstants=\"A;B\"", "&&", "exit", "%%ERRORLEVEL%%\""),
                 run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void escapedQuotesAsUsersWroteThem(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("ProductVersion", "226.110.3081"),
+                new StringParameterDefinition("BinariesDirectory", "C:\\Jenkins\\Files")));
+        Run run = run(r, p, new MsBuildBuilder(null, "HybridShell", "/p:Configuration=Release /p:Platform=x86 "
+                + "/p:DefineConstants=\\\"ProductVersion=${ProductVersion};ProductCode=*;SourceDirectory=${BinariesDirectory}\\\"", false, false, false, true), null);
+
+        // as 1.44 passed them, reported on https://github.com/jenkinsci/msbuild-plugin/pull/283
+        assertEquals(windows("\"msbuild.exe", "/p:Configuration=Release", "/p:Platform=x86",
+                "/p:DefineConstants=\"ProductVersion=226.110.3081;ProductCode=*;SourceDirectory=C:\\Jenkins\\Files\"",
+                "HybridShell", "&&", "exit", "%%ERRORLEVEL%%\""), run.launcher.lastCommand());
+    }
+
+    @Test
+    @WithJenkins
+    void escapedQuotesCannotInjectCommands(JenkinsRule r) throws Exception {
+        FreeStyleProject p = r.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("A", "\" & calc & \""),
+                new StringParameterDefinition("B", "%PATH%")));
+        Run run = run(r, p, new MsBuildBuilder(null, null,
+                "/p:X=\\\"${A}\\\" /p:Y=\\\"${B}\\\" /p:Z=\\\"a\\\"b\\\" /p:W=\\\"a\\\" c", false, false, false, true), null);
+
+        // only quotes that pair up around text without cmd.exe metacharacters pass unquoted
+        assertTrue(line(run).contains(" \"/p:X=\"\"\"\" & calc & \"\"\"\"\" "), line(run));
+        assertTrue(line(run).contains(" \"/p:Y=\"\"%\"P\"ATH%\"\"\" "), line(run));
+        assertTrue(line(run).contains(" \"/p:Z=\"\"a\"\"b\"\"\" "), line(run));
+        assertTrue(line(run).contains(" /p:W=\"a\" c "), line(run));
     }
 
     @Test
