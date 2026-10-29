@@ -379,9 +379,10 @@ public class MsBuildBuilder extends Builder {
             // [cmd.exe, /C, "chcp, <codePage>, "&", ...]
             String arg = codePage != 0 && i == 4 ? "&" : list.get(i);
             int j = i - 2;
-            if (j >= 0 && j < original.size() && LITERAL_QUOTES.matcher(original.get(j)).matches()) {
+            // the first argument, chcp or msbuild.exe, carries the opening quote of the command
+            if (j > 0 && j < original.size() && LITERAL_QUOTES.matcher(original.get(j)).matches()) {
                 // msbuild.exe parses its own command line and takes "" as two quotes, not as one literal quote
-                arg = (j == 0 ? "\"" : "") + original.get(j);
+                arg = original.get(j);
             }
             result.add(doubleBackslashesBeforeClosingQuote(arg), mask[i]);
         }
